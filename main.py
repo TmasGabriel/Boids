@@ -16,6 +16,35 @@ class Boid:
     def __init__(self, points):
         self.points = points
 
+        x_total = 0
+        y_total = 0
+        for point in points:
+            x_total += point.x
+            y_total += point.y
+        self.center = Point(x_total / 3, y_total / 3)
+
+        self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
+
+        self.slope = (self.indent.y - points[0].y) / (self.indent.x - points[0].x)
+        self.y_int = self.indent.y + (self.slope * self.indent.x)
+
+    def update(self, points):
+        x_total = 0
+        y_total = 0
+        for point in points:
+            x_total += point.x
+            y_total += point.y
+        self.center = Point(x_total / 3, y_total / 3)
+
+        self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
+
+        try:
+            self.slope = (self.indent.y - points[0].y) / (self.indent.x - points[0].x)
+        except ZeroDivisionError:
+            self.slope = numpy.inf
+            print('zero slope')
+        self.y_int = self.indent.y + (self.slope * self.indent.x)
+
     def move(self, points, x, y):
         for point in points:
             point.x = point.x + x
@@ -33,11 +62,11 @@ class Boid:
 
         return points
 
-    def controller(self, points, center):
-        allotted_movement = random.randrange(1, 10)
+    def controller(self, points, center, allotted_movement):
+        rand_movement = random.randrange(1, allotted_movement)
         foo = random.randrange(0, 4)
-        x_movement = random.randrange(0, allotted_movement)
-        y_movement = allotted_movement - x_movement
+        x_movement = random.randrange(0, rand_movement)
+        y_movement = rand_movement - x_movement
         if foo == 0:
             y_movement = -y_movement
             x_movement = -x_movement
@@ -53,55 +82,55 @@ class Boid:
         return points
 
 
+def create_boid(size):
+    points = []
+    x_offset = random.randrange(0, CANVAS_WIDTH - (4 * size))
+    y_offset = random.randrange(0, CANVAS_HEIGHT - (2 * size))
+    points.append(Point((4 * size) + x_offset, (1 * size) + y_offset))
+    points.append(Point(0 + x_offset, (2 * size) + y_offset))
+    points.append(Point(0 + x_offset, 0 + y_offset))
+
+    return points
+
 
 # vector initialization
-bow = Point(600, 300)
-starboard = Point(200, 400)
-port = Point(200, 200)
-
-test_boid = Boid([bow, starboard, port])
-center = Point((test_boid.points[0].x + test_boid.points[1].x + test_boid.points[2].x) / 3,
-               (test_boid.points[0].y + test_boid.points[1].y + test_boid.points[2].y) / 3)
+boids = []
+for i in range(100):
+    boids.append(Boid(create_boid(5)))
 
 rotation_angle = 90
 allotted_movement = 10
 
-
-for i in range(7210):
-    a = []
-    # Background
-    background = numpy.zeros((600, 600, 3), numpy.uint8)
+# game loop
+while True:
+    # Create canvas
+    background = numpy.zeros((CANVAS_WIDTH, CANVAS_HEIGHT, 3), numpy.uint8)
     background.fill(0)
 
-    # translations
-    #test_boid.rotate(test_boid.points, center, rotation_angle)
-    #test_boid.move(test_boid.points, 10, 10)
-    test_boid.controller(test_boid.points, center)
+    # changes for each individual boid
+    for test_boid in boids:
+        a = []
 
-    # recalculate center point
-    center = Point((test_boid.points[0].x + test_boid.points[1].x + test_boid.points[2].x) / 3,
-                   (test_boid.points[0].y + test_boid.points[1].y + test_boid.points[2].y) / 3)
-    indent = [(test_boid.points[1].x + test_boid.points[2].x) / 2, (test_boid.points[1].y + test_boid.points[2].y) / 2]
-    #slope = (indent[1] - bow.y) / (indent[0] - bow.x)
-    #yint = indent[1] + (slope * indent[0])
-    #print("slope " + str(round(slope)))
-    #print(numpy.cos(slope))
+        # translations
+        test_boid.controller(test_boid.points, test_boid.center, allotted_movement)
 
+        # turn boid object into usable tuple
+        for pt in test_boid.points:
+            a.append([pt.x, pt.y])
+        pts = numpy.array(a, numpy.int32)
 
-    # turn boid object into usable tuple
-    for pt in test_boid.points:
-        a.append([pt.x, pt.y])
-    pts = numpy.array(a, numpy.int32)
+        # update boid with new info
+        test_boid.update(test_boid.points)
 
-    # plot boid
-    cv2.fillPoly(background, [pts], BOID_COLOR)
-    # plot center point                                            b   g   r
-    cv2.circle(background, [round(center.x), round(center.y)], 3, (0, 255, 0), -1)
-    # center line
-    cv2.line(background, (round(bow.x), round(bow.y)), (round(indent[0]), round(indent[1])), (0, 0, 255), 1)
+        # plot boid
+        cv2.fillPoly(background, [pts], BOID_COLOR)
+        # plot center point                                                                 b   g   r
+        cv2.circle(background, [round(test_boid.center.x), round(test_boid.center.y)], 3, (0, 255, 0), -1)
+        # center line
+        cv2.line(background, (round(test_boid.points[0].x), round(test_boid.points[0].y)),
+                 (round(test_boid.indent.x), round(test_boid.indent.y)), (0, 0, 255), 1)
 
     # display boid
     cv2.imshow('Boids', background)
     # sleep function in milliseconds
     cv2.waitKey(17)
-
