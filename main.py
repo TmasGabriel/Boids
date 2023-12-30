@@ -45,10 +45,10 @@ class Boid:
             print('zero slope')
         self.y_int = self.indent.y + (self.slope * self.indent.x)
 
-    def move(self, points, x, y):
+    def move(self, points, to_move_to):
         for point in points:
-            point.x = point.x + x
-            point.y = point.y + y
+            point.x = point.x + to_move_to.x
+            point.y = point.y + to_move_to.y
 
         return points
 
@@ -62,70 +62,59 @@ class Boid:
 
         return points
 
-    def controller(self, points, center, allotted_movement, min_movement, boids):
-        min = min_movement
-        max = allotted_movement
-        center_of_local_mass = self.find_center(boids)
-        dist_from_center_of_mass = (center_of_local_mass[0] + center_of_local_mass[1]) / 2
-        if dist_from_center_of_mass != 0:
-            x_ratio = center_of_local_mass[0] / dist_from_center_of_mass
-            y_ratio = center_of_local_mass[1] / dist_from_center_of_mass
-        else:
-            x_ratio = 0
-            y_ratio = 0
-        relative_pos_x = self.center.x - center_of_local_mass[0]
-        relative_pos_y = self.center.y - center_of_local_mass[1]
+    def controller(self, points, center, min, max, boids):
+        cohesion = self.cohesion(max, boids)
 
-        if abs(relative_pos_x) > max:
-            if relative_pos_x > 0:
-                x_movement = x_ratio * -max
-            else:
-                x_movement = x_ratio * max
-
-        elif abs(relative_pos_x) < min:
-            x_movement = random.randrange(-min, min + 1)
-        else:
-            x_movement = relative_pos_x
-
-        if abs(relative_pos_y) > max:
-            if relative_pos_y > 0:
-                y_movement = y_ratio * -max
-            else:
-                y_movement = y_ratio * max
-        elif abs(relative_pos_y) < min:
-            y_movement = random.randrange(-min, min + 1)
-        else:
-            y_movement = relative_pos_y
-
-
+        to_move_to = Point(cohesion.x, cohesion.y)
 
         allotted_rotation = random.randrange(-5, 6)
         self.rotate(points, center, allotted_rotation)
-        self.move(points, x_movement, y_movement)
+        self.move(points, to_move_to)
 
         return points
 
-    def find_center(self, boids):
-        search_radius = 150
-        center_of_mass_x = 0
-        center_of_mass_y = 0
+    def find_com(self, boids, search_radius):
+        center_of_mass = Point(0, 0)
         counter = 0
         for boid in boids:
             boid.center.x = int(boid.center.x)
             boid.center.y = int(boid.center.y)
-            foox = int(self.center.x)
-            fooy = int(self.center.y)
-            if boid.center.x in range(foox - search_radius, foox + search_radius) and \
-                    boid.center.y in range(fooy - search_radius, fooy + search_radius):
-                center_of_mass_x += boid.center.x
-                center_of_mass_y += boid.center.y
+            self_center_x = int(self.center.x)
+            self_center_y = int(self.center.y)
+
+            if boid.center.x in range(self_center_x - search_radius, self_center_x + search_radius) and \
+                    boid.center.y in range(self_center_y - search_radius, self_center_y + search_radius):
+                center_of_mass.x += boid.center.x
+                center_of_mass.y += boid.center.y
                 counter += 1
 
-        center_of_mass_x /= counter
-        center_of_mass_y /= counter
-        return [center_of_mass_x, center_of_mass_y]
+        center_of_mass.x /= counter
+        center_of_mass.y /= counter
+        return center_of_mass
 
+    def cohesion(self, allotment, boids):
+        com = self.find_com(boids, VISION_RADIUS)
+        dist_from_com = Point(self.center.x - com.x, self.center.y - com.y)
+        total_dist_from_com = abs(dist_from_com.x) + abs(dist_from_com.y)
+        if total_dist_from_com < 1:
+            x_ratio = 0
+            y_ratio = 0
+        else:
+            x_ratio = dist_from_com.x / total_dist_from_com
+            y_ratio = dist_from_com.y / total_dist_from_com
 
+        to_move = Point(None, None)
+        if abs(dist_from_com.x) > allotment:
+            to_move.x = -x_ratio * allotment
+        else:
+            to_move.x = dist_from_com.x
+
+        if abs(dist_from_com.y) > allotment:
+            to_move.y = -y_ratio * allotment
+        else:
+            to_move.y = dist_from_com.y
+
+        return to_move
 
 
 def create_boid(size):
@@ -139,53 +128,49 @@ def create_boid(size):
     return points
 
 
-
 # vector initialization
 boids = []
-for i in range(50):
-    boids.append(Boid(create_boid(10)))
+for i in range(NUM_BOIDS):
+    boids.append(Boid(create_boid(BOID_SCALE)))
 
 rotation_angle = 90
-allotted_movement = 5
-min_movement = 3
 
 # game loop
 while True:
     # Create canvas
-    background = numpy.zeros((CANVAS_WIDTH, CANVAS_HEIGHT, 3), numpy.uint8)
+    background = numpy.zeros((CANVAS_HEIGHT, CANVAS_WIDTH, 3), numpy.uint8)
     background.fill(0)
 
     # changes for each individual boid
-    for test_boid in boids:
-        a = []
+    counter = 0
+    for boid in boids:
+        boid_list = []
+        counter += 1
 
         # translations
-        test_boid.controller(test_boid.points, test_boid.center, allotted_movement, min_movement, boids)
+        boid.controller(boid.points, boid.center, MIN_MOVE, MAX_MOVE, boids)
 
-        # turn boid object into usable tuple
-        for pt in test_boid.points:
-            a.append([pt.x, pt.y])
-        pts = numpy.array(a, numpy.int32)
+        # turn boid object into format for cv2
+        for pt in boid.points:
+            boid_list.append([pt.x, pt.y])
+        boid_list32 = numpy.array(boid_list, numpy.int32)
 
         # update boid with new info
-        test_boid.update(test_boid.points)
+        boid.update(boid.points)
 
         # plot boid
-        cv2.fillPoly(background, [pts], BOID_COLOR)
-        # plot center point                                                                 b   g   r
-        cv2.circle(background, [round(test_boid.center.x), round(test_boid.center.y)], 3, (0, 255, 0), -1)
-        # center line
-        #cv2.line(background, (round(test_boid.points[0].x), round(test_boid.points[0].y)),
-                 #(round(test_boid.indent.x), round(test_boid.indent.y)), (0, 0, 255), 1)
+        #cv2.fillPoly(background, [boid_list32], BOID_COLOR)
+        # plot center point
+        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 3, CENTER_COLOR, -1)
+        # plot center line
+        #cv2.line(background, (round(boid.points[0].x), round(boid.points[0].y)),
+                 #(round(boid.center.x), round(boid.center.y)), (0, 0, 255), 1)
+        # plot vision circle
+        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
+        # plot dist to com
+        com = boid.find_com(boids, VISION_RADIUS)
+        cv2.line(background, [round(boid.center.x), round(boid.center.y)], [round(com.x), round(com.y)], (0, 0, 255), 1)
 
-        cv2.circle(background, [round(test_boid.center.x), round(test_boid.center.y)], 150, (0, 255, 0))
-        apple = test_boid.find_center(boids)
-        #cv2.circle(background, [round(apple[0]), round(apple[1])], 5, (0, 0, 255), -1)
-        cv2.line(background, [round(test_boid.center.x), round(test_boid.center.y)], [round(apple[0]), round(apple[1])],
-                 (0, 0, 255), 1)
-
-
-    # display boid
+    # display drawings
     cv2.imshow('Boids', background)
-    # sleep function in milliseconds
-    cv2.waitKey(17)
+    cv2.waitKey(SLEEP_TIME)
