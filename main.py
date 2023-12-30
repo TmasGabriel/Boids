@@ -63,9 +63,11 @@ class Boid:
         return points
 
     def controller(self, points, center, min, max, boids):
-        cohesion = self.cohesion(max, boids)
+        cohesion = self.cohesion(max * .1, boids)
+        seperation = self.seperation(max * .9, boids)
 
-        to_move_to = Point(cohesion.x, cohesion.y)
+        to_move_to = Point((cohesion.x + seperation.x), (cohesion.y + seperation.y))
+        #to_move_to = Point(seperation.x, seperation.y)
 
         allotted_rotation = random.randrange(-5, 6)
         self.rotate(points, center, allotted_rotation)
@@ -116,11 +118,37 @@ class Boid:
 
         return to_move
 
+    def seperation(self, allotment, boids):
+        to_move_to = Point(0, 0)
+        for boid in boids:
+            dist = Point(boid.center.x - self.center.x, boid.center.y - self.center.y)
+
+            if FEELING_RADIUS > abs(dist.x) + abs(dist.y) != 0:
+                if abs(dist.x) < FEELING_RADIUS:
+                    norm = 1 - abs(dist.x / FEELING_RADIUS)
+                    to_move_to.x += -norm * allotment * numpy.sign(dist.x)
+                if abs(dist.y) < FEELING_RADIUS:
+                    norm = 1 - abs(dist.y / FEELING_RADIUS)
+                    to_move_to.y += -norm * allotment * numpy.sign(dist.y)
+
+        """
+        limiter
+        total_move = to_move_to.x + to_move_to.y
+
+        if total_move > allotment:
+            x_ratio = to_move_to.x / total_move
+            y_ratio = to_move_to.y / total_move
+            to_move_to.x = x_ratio * allotment * numpy.sign(to_move_to.x)
+            to_move_to.y = y_ratio * allotment * numpy.sign(to_move_to.x)
+        """
+        return to_move_to
+
+
 
 def create_boid(size):
     points = []
     x_offset = random.randrange(200, 1400 - (4 * size))
-    y_offset = random.randrange(200, 700 - (2 * size))
+    y_offset = random.randrange(100, 800 - (2 * size))
     points.append(Point((4 * size) + x_offset, (1 * size) + y_offset))
     points.append(Point(0 + x_offset, (2 * size) + y_offset))
     points.append(Point(0 + x_offset, 0 + y_offset))
@@ -161,12 +189,13 @@ while True:
         # plot boid
         #cv2.fillPoly(background, [boid_list32], BOID_COLOR)
         # plot center point
-        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 3, CENTER_COLOR, -1)
+        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 5, (0, 255, 0), -1)
+
         # plot center line
         #cv2.line(background, (round(boid.points[0].x), round(boid.points[0].y)),
                  #(round(boid.center.x), round(boid.center.y)), (0, 0, 255), 1)
         # plot vision circle
-        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
+        #cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
         # plot dist to com
         com = boid.find_com(boids, VISION_RADIUS)
         cv2.line(background, [round(boid.center.x), round(boid.center.y)], [round(com.x), round(com.y)], (0, 0, 255), 1)
