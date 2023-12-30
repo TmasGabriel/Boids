@@ -62,15 +62,20 @@ class Boid:
 
         return points
 
-    def controller(self, points, center, min, max, boids):
+    def controller(self, points, center, min, max, boids, rot):
         cohesion = self.cohesion(max * .1, boids)
-        seperation = self.seperation(max * .9, boids)
+        seperation = self.separation(max * .7, boids)
+        random_move = random.randrange(-max, max + 1) * .2
+        alignment = self.alignment(boids)
 
-        to_move_to = Point((cohesion.x + seperation.x), (cohesion.y + seperation.y))
+        if alignment[0]:
+            self.rotate(points, center, rot)
+        elif alignment[1]:
+            self.rotate(points, center, -rot)
+
+        to_move_to = Point((cohesion.x + seperation.x + random_move), (cohesion.y + seperation.y + random_move))
         #to_move_to = Point(seperation.x, seperation.y)
 
-        allotted_rotation = random.randrange(-5, 6)
-        self.rotate(points, center, allotted_rotation)
         self.move(points, to_move_to)
 
         return points
@@ -118,7 +123,7 @@ class Boid:
 
         return to_move
 
-    def seperation(self, allotment, boids):
+    def separation(self, allotment, boids):
         to_move_to = Point(0, 0)
         for boid in boids:
             dist = Point(boid.center.x - self.center.x, boid.center.y - self.center.y)
@@ -143,12 +148,63 @@ class Boid:
         """
         return to_move_to
 
+    def find_alignment(self):
+        return numpy.arctan2(self.points[0].y - self.center.y, self.points[0].x - self.center.x)
+
+    def alignment(self, boids):
+        to_move_to = Point(0, 0)
+        total_alignment = 0
+        count = 0
+        for boid in boids:
+            dist = Point(boid.center.x - self.center.x, boid.center.y - self.center.y)
+            if dist.x + dist.y < VISION_RADIUS:
+                total_alignment += boid.find_alignment()
+                count += 1
+
+        avg_alignment = total_alignment / count
+        misalignment = self.find_alignment() - avg_alignment
+        counter = False
+        clock = False
+        if abs(misalignment) > 180:
+            if numpy.sign(misalignment) == 1:
+                counter = True
+            else:
+                clock = True
+        else:
+            if numpy.sign(misalignment) == 1:
+                clock = True
+            elif numpy.sign(misalignment) == -1:
+                counter = True
+
+        return counter, clock
+
+
+    def hit_wall(self, points):
+        # right wall
+        if self.center.x > CANVAS_WIDTH:
+            for point in points:
+                point.x -= (CANVAS_WIDTH - 25)
+        # left wall
+        elif self.center.x < 0:
+            for point in points:
+                point.x += (CANVAS_WIDTH - 25)
+        # bottom wall
+        if self.center.y > CANVAS_HEIGHT:
+            for point in points:
+                point.y -= (CANVAS_HEIGHT - 25)
+        # top wall
+        elif self.center.y < 0:
+            for point in points:
+                point.y += (CANVAS_HEIGHT - 25)
+
+        return points
+
 
 
 def create_boid(size):
     points = []
-    x_offset = random.randrange(200, 1400 - (4 * size))
-    y_offset = random.randrange(100, 800 - (2 * size))
+    x_offset = random.randrange(50, 1550 - (4 * size))
+    y_offset = random.randrange(50, 850 - (2 * size))
     points.append(Point((4 * size) + x_offset, (1 * size) + y_offset))
     points.append(Point(0 + x_offset, (2 * size) + y_offset))
     points.append(Point(0 + x_offset, 0 + y_offset))
@@ -160,8 +216,6 @@ def create_boid(size):
 boids = []
 for i in range(NUM_BOIDS):
     boids.append(Boid(create_boid(BOID_SCALE)))
-
-rotation_angle = 90
 
 # game loop
 while True:
@@ -176,7 +230,9 @@ while True:
         counter += 1
 
         # translations
-        boid.controller(boid.points, boid.center, MIN_MOVE, MAX_MOVE, boids)
+        boid.controller(boid.points, boid.center, MIN_MOVE, MAX_MOVE, boids, ROTATION)
+
+        boid.hit_wall(boid.points)
 
         # turn boid object into format for cv2
         for pt in boid.points:
@@ -187,7 +243,7 @@ while True:
         boid.update(boid.points)
 
         # plot boid
-        #cv2.fillPoly(background, [boid_list32], BOID_COLOR)
+        cv2.fillPoly(background, [boid_list32], BOID_COLOR)
         # plot center point
         cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 5, (0, 255, 0), -1)
 

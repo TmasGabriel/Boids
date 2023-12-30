@@ -7,6 +7,7 @@ CENTER_COLOR = (000, 255, 000)
 
 MAX_MOVE = 10 # maximum amount of pixels a boid can move per frame
 MIN_MOVE = 1 # minimum amount of pixels a boid can move per frame
+ROTATION = 1
 
 NUM_BOIDS = 50
 BOID_SCALE = 10 # how many times larger should boids be than base size (4 by 2 pixels)
