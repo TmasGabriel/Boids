@@ -66,12 +66,6 @@ class Boid:
         cohesion = self.cohesion(max, boids)
 
         to_move_to = Point(cohesion.x, cohesion.y)
-        if to_move_to.x > max:
-            print(to_move_to.x)
-            pass
-        if to_move_to.y > max:
-            print(to_move_to.y)
-            pass
 
         allotted_rotation = random.randrange(-5, 6)
         self.rotate(points, center, allotted_rotation)
