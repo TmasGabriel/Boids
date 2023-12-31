@@ -1,7 +1,6 @@
 import numpy
 import cv2
 import random
-import time
 
 from __init__ import *
 
@@ -18,83 +17,40 @@ class Boid:
 
         x_total = 0
         y_total = 0
-        for point in points:
+        for point in self.points:
             x_total += point.x
             y_total += point.y
+
         self.center = Point(x_total / 3, y_total / 3)
+        self.theta = self.find_alignment(self.points[0])
+        #self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
 
-        self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
-
-        self.slope = (self.indent.y - points[0].y) / (self.indent.x - points[0].x)
-        self.y_int = self.indent.y + (self.slope * self.indent.x)
-
-    def update(self, points):
+    def update(self):
         x_total = 0
         y_total = 0
-        for point in points:
+        for point in self.points:
             x_total += point.x
             y_total += point.y
+
         self.center = Point(x_total / 3, y_total / 3)
+        self.theta = self.find_alignment(self.points[0])
+        #self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
 
-        self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
+    def move(self, direc):
+        for point in self.points:
+            point.x += MOVE_SPEED * numpy.cos(direc)
+            point.y += MOVE_SPEED * numpy.sin(direc)
 
-        try:
-            self.slope = (self.indent.y - points[0].y) / (self.indent.x - points[0].x)
-        except ZeroDivisionError:
-            self.slope = numpy.inf
-            print('zero slope')
-        self.y_int = self.indent.y + (self.slope * self.indent.x)
-
-    def move(self, points, to_move_to):
-        for point in points:
-            point.x = point.x + to_move_to.x
-            point.y = point.y + to_move_to.y
-
-        return points
-
-    def rotate(self, points, center, angle):
-        for point in points:
-            x = point.x - center.x
-            y = point.y - center.y
+    def rotate(self, angle):
+        for point in self.points:
+            x = point.x - self.center.x
+            y = point.y - self.center.y
             angle_rad = angle * numpy.pi / 180
-            point.x = (x * numpy.cos(angle_rad)) - (y * numpy.sin(angle_rad)) + center.x
-            point.y = (x * numpy.sin(angle_rad)) + (y * numpy.cos(angle_rad)) + center.y
+            point.x = (x * numpy.cos(angle_rad)) - (y * numpy.sin(angle_rad)) + self.center.x
+            point.y = (x * numpy.sin(angle_rad)) + (y * numpy.cos(angle_rad)) + self.center.y
 
-        return points
-
-    def controller(self, points, center, min, max, boids, rot):
-        cohesion = self.cohesion(max * .1, boids)
-        seperation = self.separation(max * .5, boids)
-        random_move = random.randrange(-max, max + 1) * .5
-        alignment = self.alignment(boids)
-        align_movement = self.align_movement()
-        alignment_move = Point(0, 0)
-        random_rot = random.randrange(-1, 2)
-
-        x_ratio = 1 / align_movement[1]
-        y_ratio = 1 - abs(x_ratio)
-        alignment_move.x = -x_ratio * max * .2
-
-        if align_movement[0] == False:
-            alignment_move.y = y_ratio * max * .2
-        else:
-            alignment_move.y = -y_ratio * max * .2
-
-        if alignment[1]:
-            self.rotate(points, center, rot * .5 + random_rot * .5)
-        elif alignment[0]:
-            self.rotate(points, center, -rot * .5 + random_rot * .5)
-
-        to_move_to = Point((cohesion.x + seperation.x + random_move + alignment_move.x), (cohesion.y + seperation.y + random_move + alignment_move.y))
-        #to_move_to = Point(seperation.x, seperation.y)
-
-        self.move(points, to_move_to)
-
-        return points
-
-    def find_com(self, boids, search_radius):
-        center_of_mass = Point(0, 0)
-        counter = 0
+    def search_area(self, boids, search_radius):
+        boids_in_your_area = []
         for boid in boids:
             boid.center.x = int(boid.center.x)
             boid.center.y = int(boid.center.y)
@@ -103,131 +59,103 @@ class Boid:
 
             if boid.center.x in range(self_center_x - search_radius, self_center_x + search_radius) and \
                     boid.center.y in range(self_center_y - search_radius, self_center_y + search_radius):
-                center_of_mass.x += boid.center.x
-                center_of_mass.y += boid.center.y
-                counter += 1
+                boids_in_your_area.append(boid)
 
-        center_of_mass.x /= counter
-        center_of_mass.y /= counter
+        return boids_in_your_area
+
+########################################################################################################################
+
+    def controller(self):
+        com = self.find_com(all_boids, VISION_RADIUS)
+        seperation = self.separation(all_boids, VISION_RADIUS)
+        alignment = self.alignment(all_boids, VISION_RADIUS)
+
+        total = Point(None, None)
+        total.x = ((com.x * 1) + (alignment.x * 0) + (seperation.x * 0))
+        total.y = ((com.y * 1) + (alignment.y * 0) + (seperation.y * 0))
+
+        pivot = self.turn_to_face(total)
+        self.rotate(pivot * ROTATION)
+
+        self.move(self.theta)
+
+########################################################################################################################
+
+    def turn_to_face(self, target):
+        target_theta = self.find_alignment(target)
+        pivot = 0
+        delta = target_theta - self.theta
+
+        if delta > numpy.pi:
+            delta -= 2 * numpy.pi
+        elif delta < -numpy.pi:
+            delta += 2 * numpy.pi
+
+        if delta > 0:
+            pivot = 1
+        elif delta < 0:
+            pivot = -1
+
+        return pivot
+
+    def find_com(self, boids, search_radius):
+        total_mass = [0, 0]
+        area = self.search_area(boids, search_radius)
+        for boid in area:
+            total_mass[0] += boid.center.x
+            total_mass[1] += boid.center.y
+
+        center_of_mass = Point(total_mass[0], total_mass[1])
+        center_of_mass.x /= len(area)
+        center_of_mass.y /= len(area)
+
         return center_of_mass
 
-    def cohesion(self, allotment, boids):
-        com = self.find_com(boids, VISION_RADIUS)
-        dist_from_com = Point(self.center.x - com.x, self.center.y - com.y)
-        total_dist_from_com = abs(dist_from_com.x) + abs(dist_from_com.y)
-        if total_dist_from_com < 1:
-            x_ratio = 0
-            y_ratio = 0
-        else:
-            x_ratio = dist_from_com.x / total_dist_from_com
-            y_ratio = dist_from_com.y / total_dist_from_com
-
-        to_move = Point(None, None)
-        if abs(dist_from_com.x) > allotment:
-            to_move.x = -x_ratio * allotment
-        else:
-            to_move.x = dist_from_com.x
-
-        if abs(dist_from_com.y) > allotment:
-            to_move.y = -y_ratio * allotment
-        else:
-            to_move.y = dist_from_com.y
-
-        return to_move
-
-    def separation(self, allotment, boids):
+    def separation(self, boids, search_radius):
         to_move_to = Point(0, 0)
-        for boid in boids:
+        area = self.search_area(boids, search_radius)
+        for boid in area:
             dist = Point(boid.center.x - self.center.x, boid.center.y - self.center.y)
+            norm = 1 - abs(dist.x / search_radius)
+            to_move_to.x += -norm * numpy.sign(dist.x)
+            norm = 1 - abs(dist.y / search_radius)
+            to_move_to.y += -norm * numpy.sign(dist.y)
 
-            if FEELING_RADIUS > abs(dist.x) + abs(dist.y) != 0:
-                if abs(dist.x) < FEELING_RADIUS:
-                    norm = 1 - abs(dist.x / FEELING_RADIUS)
-                    to_move_to.x += -norm * allotment * numpy.sign(dist.x)
-                if abs(dist.y) < FEELING_RADIUS:
-                    norm = 1 - abs(dist.y / FEELING_RADIUS)
-                    to_move_to.y += -norm * allotment * numpy.sign(dist.y)
-
-        """
-        limiter
-        total_move = to_move_to.x + to_move_to.y
-
-        if total_move > allotment:
-            x_ratio = to_move_to.x / total_move
-            y_ratio = to_move_to.y / total_move
-            to_move_to.x = x_ratio * allotment * numpy.sign(to_move_to.x)
-            to_move_to.y = y_ratio * allotment * numpy.sign(to_move_to.x)
-        """
         return to_move_to
 
-    def find_alignment(self):
-        return numpy.arctan2(self.points[0].y - self.center.y, self.points[0].x - self.center.x)
+    def find_alignment(self, point):
+        return numpy.arctan2(point.y - self.center.y, point.x - self.center.x)
 
-    def alignment(self, boids):
-        to_move_to = Point(0, 0)
-        total_alignment = 0
-        count = 0
-        for boid in boids:
-            dist = Point(boid.center.x - self.center.x, boid.center.y - self.center.y)
-            if dist.x + dist.y < VISION_RADIUS:
-                total_alignment += boid.find_alignment()
-                count += 1
+    def alignment(self, boids, search_radius):
+        total_theta = [0, 0]
+        in_area = self.search_area(boids, search_radius)
+        for boid in in_area:
+            total_theta[0] += boid.theta
+            total_theta[1] += boid.theta
 
-        avg_alignment = total_alignment / count
-        misalignment = self.find_alignment() - avg_alignment
-        counter = False
-        clock = False
-        if abs(misalignment) > 180:
-            if numpy.sign(misalignment) == 1:
-                counter = True
-            else:
-                clock = True
-        else:
-            if numpy.sign(misalignment) == 1:
-                clock = True
-            elif numpy.sign(misalignment) == -1:
-                counter = True
+        avg_alignment = Point(total_theta[0], total_theta[1])
+        avg_alignment.x /= len(in_area)
+        avg_alignment.y /= len(in_area)
 
-        return counter, clock
+        return avg_alignment
 
-    def align_movement(self):
-        theta = self.find_alignment()
-        print(theta)
-        if -2 < theta < 2:
-            theta = 2
-        slope = numpy.tan(theta)
-
-        direction = self.center.y - self.points[0].y
-
-        if numpy.sign(direction) == 1:
-            up = True
-        else:
-            up = False
-
-        return up, slope
-
-
-
-    def hit_wall(self, points):
+    def magic_wall(self):
         # right wall
         if self.center.x > CANVAS_WIDTH:
-            for point in points:
-                point.x -= (CANVAS_WIDTH - 25)
+            for point in self.points:
+                point.x -= (CANVAS_WIDTH - 5)
         # left wall
         elif self.center.x < 0:
-            for point in points:
-                point.x += (CANVAS_WIDTH - 25)
+            for point in self.points:
+                point.x += (CANVAS_WIDTH - 5)
         # bottom wall
         if self.center.y > CANVAS_HEIGHT:
-            for point in points:
-                point.y -= (CANVAS_HEIGHT - 25)
+            for point in self.points:
+                point.y -= (CANVAS_HEIGHT - 5)
         # top wall
         elif self.center.y < 0:
-            for point in points:
-                point.y += (CANVAS_HEIGHT - 25)
-
-        return points
-
+            for point in self.points:
+                point.y += (CANVAS_HEIGHT - 5)
 
 
 def create_boid(size):
@@ -242,9 +170,12 @@ def create_boid(size):
 
 
 # vector initialization
-boids = []
+all_boids = []
 for i in range(NUM_BOIDS):
-    boids.append(Boid(create_boid(BOID_SCALE)))
+    all_boids.append(Boid(create_boid(BOID_SCALE)))
+for i in all_boids:
+    rand_rotation = random.randrange(0, 361)
+    i.rotate(rand_rotation)
 
 # game loop
 while True:
@@ -254,36 +185,36 @@ while True:
 
     # changes for each individual boid
     counter = 0
-    for boid in boids:
-        boid_list = []
+    for each_boid in all_boids:
+        points_list = []
         counter += 1
 
         # translations
-        boid.controller(boid.points, boid.center, MIN_MOVE, MAX_MOVE, boids, ROTATION)
+        each_boid.controller()
 
-        boid.hit_wall(boid.points)
+        # create magic walls
+        each_boid.magic_wall()
 
         # turn boid object into format for cv2
-        for pt in boid.points:
-            boid_list.append([pt.x, pt.y])
-        boid_list32 = numpy.array(boid_list, numpy.int32)
-
+        for pt in each_boid.points:
+            points_list.append([pt.x, pt.y])
+        boid_list32 = numpy.array(points_list, numpy.int32)
         # update boid with new info
-        boid.update(boid.points)
+        each_boid.update()
 
         # plot boid
         cv2.fillPoly(background, [boid_list32], BOID_COLOR)
         # plot center point
-        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 3, (0, 255, 0), -1)
-
-        # plot center line
-        cv2.line(background, (round(boid.points[0].x), round(boid.points[0].y)),
-                 (round(boid.center.x), round(boid.center.y)), (0, 0, 255), 1)
+        cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
+        # plot alignment line
+        cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)),
+                 (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
         # plot vision circle
-        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
-        # plot dist to com
-        com = boid.find_com(boids, VISION_RADIUS)
-        cv2.line(background, [round(boid.center.x), round(boid.center.y)], [round(com.x), round(com.y)], (0, 0, 255), 1)
+        cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], VISION_RADIUS, VISION_COLOR)
+        # plot dist to center of mass
+        center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
+        cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
+        [round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
 
     # display drawings
     cv2.imshow('Boids', background)
