@@ -64,16 +64,28 @@ class Boid:
 
     def controller(self, points, center, min, max, boids, rot):
         cohesion = self.cohesion(max * .1, boids)
-        seperation = self.separation(max * .7, boids)
-        random_move = random.randrange(-max, max + 1) * .2
+        seperation = self.separation(max * .5, boids)
+        random_move = random.randrange(-max, max + 1) * .5
         alignment = self.alignment(boids)
+        align_movement = self.align_movement()
+        alignment_move = Point(0, 0)
+        random_rot = random.randrange(-1, 2)
 
-        if alignment[0]:
-            self.rotate(points, center, rot)
-        elif alignment[1]:
-            self.rotate(points, center, -rot)
+        x_ratio = 1 / align_movement[1]
+        y_ratio = 1 - abs(x_ratio)
+        alignment_move.x = -x_ratio * max * .2
 
-        to_move_to = Point((cohesion.x + seperation.x + random_move), (cohesion.y + seperation.y + random_move))
+        if align_movement[0] == False:
+            alignment_move.y = y_ratio * max * .2
+        else:
+            alignment_move.y = -y_ratio * max * .2
+
+        if alignment[1]:
+            self.rotate(points, center, rot * .5 + random_rot * .5)
+        elif alignment[0]:
+            self.rotate(points, center, -rot * .5 + random_rot * .5)
+
+        to_move_to = Point((cohesion.x + seperation.x + random_move + alignment_move.x), (cohesion.y + seperation.y + random_move + alignment_move.y))
         #to_move_to = Point(seperation.x, seperation.y)
 
         self.move(points, to_move_to)
@@ -178,6 +190,23 @@ class Boid:
 
         return counter, clock
 
+    def align_movement(self):
+        theta = self.find_alignment()
+        print(theta)
+        if -2 < theta < 2:
+            theta = 2
+        slope = numpy.tan(theta)
+
+        direction = self.center.y - self.points[0].y
+
+        if numpy.sign(direction) == 1:
+            up = True
+        else:
+            up = False
+
+        return up, slope
+
+
 
     def hit_wall(self, points):
         # right wall
@@ -245,13 +274,13 @@ while True:
         # plot boid
         cv2.fillPoly(background, [boid_list32], BOID_COLOR)
         # plot center point
-        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 5, (0, 255, 0), -1)
+        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], 3, (0, 255, 0), -1)
 
         # plot center line
-        #cv2.line(background, (round(boid.points[0].x), round(boid.points[0].y)),
-                 #(round(boid.center.x), round(boid.center.y)), (0, 0, 255), 1)
+        cv2.line(background, (round(boid.points[0].x), round(boid.points[0].y)),
+                 (round(boid.center.x), round(boid.center.y)), (0, 0, 255), 1)
         # plot vision circle
-        #cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
+        cv2.circle(background, [round(boid.center.x), round(boid.center.y)], VISION_RADIUS, (0, 255, 0))
         # plot dist to com
         com = boid.find_com(boids, VISION_RADIUS)
         cv2.line(background, [round(boid.center.x), round(boid.center.y)], [round(com.x), round(com.y)], (0, 0, 255), 1)
