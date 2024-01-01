@@ -67,31 +67,18 @@ class Boid:
 
     def controller(self):
         com = self.find_com(all_boids, VISION_RADIUS)
-        closest_boid = self.find_closest_boid(all_boids, VISION_RADIUS)
+        closest_boid = self.find_closest_boid(all_boids, FEELING_RADIUS)
         alignment = self.alignment(all_boids, VISION_RADIUS)
 
         pivot_com = self.turn_to_face(com)
         pivot_sep = self.turn_to_face(closest_boid) * -1
-        self.rotate(1 * 1 * alignment)
+        self.rotate(.5 * pivot_com * ROTATION / 3)
+        self.rotate(1 * alignment * ROTATION / 3)
+        self.rotate(pivot_sep * ROTATION / 3)
 
         self.move(self.theta)
 
 ########################################################################################################################
-
-    def is_facing(self):
-        is_facing = False
-        multiplier = 100
-        fov = 120
-        fov_rad = (fov * numpy.pi / 180) / 2
-        #target_theta = int(self.find_alignment(target) * multiplier)
-
-        upper_bound = int((self.theta + fov_rad) * multiplier)
-        lower_bound = int((self.theta - fov_rad) * multiplier)
-
-        #if target_theta in range(lower_bound, upper_bound):
-            #is_facing = True
-
-        return [upper_bound, lower_bound]
 
     def turn_to_face(self, target):
         pivot = 0
@@ -141,26 +128,38 @@ class Boid:
     def find_alignment(self, point):
         return numpy.arctan2((point.y - self.center.y), point.x - self.center.x)
 
+    def to_deg(self, rads):
+        angle = round(rads * 180 / numpy.pi)
+        if angle < 0:
+            angle = abs(angle) + 180
+
+        return angle
+
     def alignment(self, boids, search_radius):
         total_theta = 0
-        pivot = -1
+        clock = 0
+        counter = 0
         in_area = self.search_area(boids, search_radius)
         for boid in in_area:
             total_theta += boid.theta
+            delta = self.to_deg(self.theta) - self.to_deg(boid.theta)
 
-        avg_alignment = total_theta / len(in_area)
+            if delta < 0:
+                if abs(delta) > 180:
+                    clock += 1
+                else:
+                    counter += 1
+            if delta > 0:
+                if abs(delta) > 180:
+                    counter += 1
+                else:
+                    clock += 1
 
-        delta = avg_alignment - self.theta
-        print(avg_alignment)
-        '''
-        if delta > numpy.pi:
-            delta -= 2 * numpy.pi
-        elif delta < -numpy.pi:
-            delta += 2 * numpy.pi
-        '''
-        if delta > 0:
+        pivot = 0
+        if clock > counter:
             pivot = 1
-        elif delta < 0:
+
+        if counter > clock:
             pivot = -1
 
         return pivot
@@ -233,6 +232,8 @@ while True:
 
         # plot boid
         if each_boid == all_boids[0]:
+            #print(each_boid.alignment(all_boids, VISION_RADIUS))
+            each_boid.to_deg(each_boid.theta)
             cv2.fillPoly(background, [boid_list32], (97, 105, 255))
             # plot dist to center of mass
 
@@ -240,20 +241,22 @@ while True:
             cv2.fillPoly(background, [boid_list32], BOID_COLOR)
 
         # plot center point
-        cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
+        #cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
         # plot alignment line
-        cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)),
-                 (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
+        #cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)),
+                 #(round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
         # plot vision circle
-        cv2.circle(background, [round(all_boids[0].center.x), round(all_boids[0].center.y)], VISION_RADIUS, VISION_COLOR)
+        #cv2.circle(background, [round(all_boids[0].center.x), round(all_boids[0].center.y)], VISION_RADIUS, VISION_COLOR)
         # find closest boid
-        apple = each_boid.find_closest_boid(all_boids, VISION_RADIUS)
-        if apple != None:
-            cv2.line(background, (round(each_boid.center.x), round(each_boid.center.y)),
-            (round(apple.x), round(apple.y)), ALIGNMENT_LINE_COLOR, 1)
-        center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
-        cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
-        [round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
+        #apple = each_boid.get_neighbors(all_boids, VISION_RADIUS)
+        #if len(apple) != 0:
+            #for i in apple:
+                #print(apple[0].center.x)
+                #cv2.line(background, (round(each_boid.center.x), round(each_boid.center.y)),
+                #(round(i.center.x), round(i.center.y)), ALIGNMENT_LINE_COLOR, 1)
+        #center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
+        #cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
+        #[round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
 
 
     # display drawings
