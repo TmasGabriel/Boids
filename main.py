@@ -2,6 +2,7 @@ import numpy
 import cv2
 import random
 import math
+import time
 
 from __init__ import *
 
@@ -65,6 +66,7 @@ class Boid:
             point.y = (x * numpy.sin(angle_rad)) + (y * numpy.cos(angle_rad)) + self.center.y
 
     def search_area(self, boids, search_radius):
+        start_time = time.time()
         boids_in_your_area = []
         for boid in boids:
             boid.center.x = int(boid.center.x)
@@ -76,20 +78,34 @@ class Boid:
                     boid.center.y in range(self_center_y - search_radius, self_center_y + search_radius):
                 boids_in_your_area.append(boid)
 
+        
         return boids_in_your_area
+
+    """
+    slower
+    def search_area(self, boids, search_radius):
+        neighbors = []
+        for boid in boids:
+            if boid != self.center and numpy.sqrt((boid.center.x - self.center.x) ** 2 + (boid.center.y - self.center.y) ** 2) < search_radius:
+                neighbors.append(boid)
+        return neighbors
+        
+        """
 
 ########################################################################################################################
 
     def controller(self):
-        #com = self.find_com(all_boids, VISION_RADIUS)
-        #closest_boid = self.find_closest_boid(all_boids, VISION_RADIUS)
+        com = self.find_com(all_boids, VISION_RADIUS)
+        closest_boid = self.find_closest_boid(all_boids, VISION_RADIUS)
         alignment = self.alignment(all_boids, VISION_RADIUS)
 
-        #pivot_com = self.turn_to_face(com)
-        #pivot_sep = self.turn_to_face(closest_boid) * -1
+        pivot_com = self.turn_to_face(com)
+        pivot_sep = self.turn_to_face(closest_boid) * -1
         #self.rotate(1 * 1 * alignment)
 
         self.rotate( alignment )
+        #self.rotate(pivot_com)
+        self.rotate(pivot_sep)
 
         #I think we need to recalculate theta after rotation  TEST TEST TEST
         #self.theta = self.find_alignment(self.points[0])
@@ -285,7 +301,6 @@ def create_boid(size):
 
     return points
 
-
 # vector initialization
 all_boids = []
 for i in range(NUM_BOIDS):
@@ -301,11 +316,47 @@ for i in all_boids:
     i.center = Point(x_total / 3, y_total / 3)
     i.find_alignment(i.points[0])  #TEST
 
+
+class Screen:
+    def __init__(self, boid):
+        points_list = []
+        for point in boid.points:
+            points_list.append([point.x, point.y])
+        self.boid_list32 = numpy.array(points_list, numpy.int32)
+
+    def draw_boid(self):
+        cv2.fillPoly(background, [self.boid_list32], BOID_COLOR)
+
+    def plot_center(self):
+        cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
+    def plot_corners(self):
+        cv2.circle(background, [round(each_boid.points[0].x), round(each_boid.points[0].y)], 3, CENTER_OF_MASS_LINE_COLOR, -1)
+        cv2.circle(background, [round(each_boid.points[1].x), round(each_boid.points[1].y)], 3, CENTER_COLOR_DOT, -1)
+        cv2.circle(background, [round(each_boid.points[2].x), round(each_boid.points[2].y)], 3, CENTER_COLOR_DOT, -1)
+
+    def draw_alignment_line(self):
+        cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)), (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
+
+    def draw_vision(self):
+        cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], VISION_RADIUS, VISION_COLOR)
+
+    def draw_com(self):
+        center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
+        cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
+                 [round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
+
+    def draw_closest(self):
+        apple = each_boid.find_closest_boid(all_boids, VISION_RADIUS)
+        if apple != None:
+            cv2.line(background, (round(each_boid.center.x), round(each_boid.center.y)),
+                     (round(apple.x), round(apple.y)), ALIGNMENT_LINE_COLOR, 1)
+
+
 # game loop
 some_time = 10
 each_time = 1
 background = 0
-while True:
+for i in range(100):
     # Create canvas
 
     if each_time > some_time:
@@ -314,6 +365,7 @@ while True:
     # changes for each individual boid
         counter = 0
         for each_boid in all_boids:
+            screen = Screen(each_boid)
             points_list = []
             counter += 1
 
@@ -323,45 +375,26 @@ while True:
         # create magic walls
             each_boid.magic_wall()
 
-
-
-
-        # turn boid object into format for cv2
-            for pt in each_boid.points:
-                points_list.append([pt.x, pt.y])
-            boid_list32 = numpy.array(points_list, numpy.int32)
         # update boid with new info
             each_boid.update()
 
         # plot boid
-            if each_boid == all_boids[0]:
-                cv2.fillPoly(background, [boid_list32], (97, 105, 255))
-            # plot dist to center of mass
-
-            else:
-                cv2.fillPoly(background, [boid_list32], BOID_COLOR)
+            screen.draw_boid()
 
         # plot center point
-            cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
+            screen.plot_center()
 
         # plot boid points
-            cv2.circle(background, [round(each_boid.points[0].x), round(each_boid.points[0].y)], 3, CENTER_OF_MASS_LINE_COLOR, -1)
-            cv2.circle(background, [round(each_boid.points[1].x), round(each_boid.points[1].y)], 3, CENTER_COLOR_DOT, -1)
-            cv2.circle(background, [round(each_boid.points[2].x), round(each_boid.points[2].y)], 3, CENTER_COLOR_DOT, -1)
+            screen.plot_corners()
 
         # plot alignment line
-            cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)),
-                     (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
+            screen.draw_alignment_line()
+
         # plot vision circle
-            cv2.circle(background, [round(all_boids[0].center.x), round(all_boids[0].center.y)], VISION_RADIUS, VISION_COLOR)
+            screen.draw_vision()
         # find closest boid
-            apple = each_boid.find_closest_boid(all_boids, VISION_RADIUS)
-            if apple != None:
-                cv2.line(background, (round(each_boid.center.x), round(each_boid.center.y)),
-                (round(apple.x), round(apple.y)), ALIGNMENT_LINE_COLOR, 1)
-            center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
-            cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
-            [round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
+            screen.draw_com()
+            screen.draw_closest()
         some_time += SIM_SLOW_SPEED
 
     each_time += 1
