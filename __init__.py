@@ -13,8 +13,8 @@ SIM_SLOW_SPEED = 1
 MOVE_SPEED = 5 # amount of pixels a boid will move per frame
 ROTATION = 6
 
-NUM_BOIDS = 40
-BOID_SCALE = 5 # how many times larger should boids be than base size (4 by 2 pixels)
+NUM_BOIDS = 1
+BOID_SCALE = 15 # how many times larger should boids be than base size (4 by 2 pixels)
 
 VISION_RADIUS = 50 # how far boids can see
 

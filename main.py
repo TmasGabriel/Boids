@@ -14,36 +14,53 @@ class Point:
 
 
 class Boid:
-    def __init__(self, points):
-        self.points = points
+    def __init__(self, vertices):
+        self.vertices = vertices
 
-        x_total = 0
-        y_total = 0
-        for point in self.points:
-            x_total += point.x
-            y_total += point.y
+        total_vertices = Point(0, 0)
 
-        self.center = Point(x_total / 3, y_total / 3)
-        self.theta = self.find_alignment(self.points[0])
-        #self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
+        for vertex in self.vertices:
+            total_vertices.x += vertex.x
+            total_vertices.y += vertex.y
+
+        self.center = Point(total_vertices.x / 3, total_vertices.y / 3)
+
+        self.theta = self.find_alignment(self.vertices[0])
+
+        # self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
 
     def update(self):
-        x_total = 0
-        y_total = 0
-        for point in self.points:
-            x_total += point.x
-            y_total += point.y
+        total_vertices = Point(0, 0)
+        for vertex in self.vertices:
+            total_vertices.x += vertex.x
+            total_vertices.y += vertex.y
+        self.center = Point(total_vertices.x / 3, total_vertices.y / 3)
 
-        #find the center based on current updated points
-        self.center = Point(x_total / 3, y_total / 3)
-        #update alignment
-        self.theta = self.find_alignment(self.points[0])
-        #self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
+        # self.indent = Point((points[1].x + points[2].x) / 2, (points[1].y + points[2].y) / 2)
 
-    def move(self, direc):
-        for point in self.points:
-            point.x += MOVE_SPEED * numpy.cos(direc)
-            point.y += MOVE_SPEED * numpy.sin(direc)
+        ################################################################################################################
+
+        com = self.find_com(boid_list, VISION_RADIUS)
+        closest_boid = self.find_closest_boid(boid_list, VISION_RADIUS)
+        alignment = self.alignment(boid_list, VISION_RADIUS)
+
+        pivot_to_com = self.turn_to_face(com)
+        pivot_to_sep = self.turn_to_face(closest_boid) * -1
+
+        self.rotate(alignment)
+        # self.rotate(pivot_to_com)
+        self.rotate(pivot_to_sep)
+
+        self.theta = self.find_alignment(self.vertices[0])
+
+        self.move(self.theta)
+
+    ####################################################################################################################
+
+    def move(self, direction):
+        for point in self.vertices:
+            point.x += MOVE_SPEED * numpy.cos(direction)
+            point.y += MOVE_SPEED * numpy.sin(direction)
 
     def rotate_point(self, pointx, pointy, originx, originy, degrees):
         radians = numpy.deg2rad(degrees)
@@ -55,15 +72,24 @@ class Boid:
 
     #Takes number of degrees to rotate - to change rotation direction
     def rotate(self, angle):
-        for point in self.points:
-            x = 0
-            y = 0
+        for point in self.vertices:
             x = point.x - self.center.x
             y = point.y - self.center.y
-            #WASangle_rad = angle * numpy.pi / 180
             angle_rad = numpy.deg2rad(angle)
             point.x = (x * numpy.cos(angle_rad)) - (y * numpy.sin(angle_rad)) + self.center.x
             point.y = (x * numpy.sin(angle_rad)) + (y * numpy.cos(angle_rad)) + self.center.y
+
+    def rotate2(self, angle):
+        theta_deg = numpy.rad2deg(self.theta)
+        new_angle = numpy.deg2rad(theta_deg + angle)
+        print(angle)
+        print(theta_deg, self.theta)
+        print(new_angle)
+        for point in self.vertices:
+            x = point.x - self.center.x
+            y = point.y - self.center.y
+            point.x = (x * numpy.cos(new_angle)) - (y * numpy.sin(new_angle)) + self.center.x
+            point.y = (x * numpy.sin(new_angle)) + (y * numpy.cos(new_angle)) + self.center.y
 
     def search_area(self, boids, search_radius):
         start_time = time.time()
@@ -91,31 +117,6 @@ class Boid:
         return neighbors
         
         """
-
-########################################################################################################################
-
-    def controller(self):
-        com = self.find_com(all_boids, VISION_RADIUS)
-        closest_boid = self.find_closest_boid(all_boids, VISION_RADIUS)
-        alignment = self.alignment(all_boids, VISION_RADIUS)
-
-        pivot_com = self.turn_to_face(com)
-        pivot_sep = self.turn_to_face(closest_boid) * -1
-        #self.rotate(1 * 1 * alignment)
-
-        self.rotate( alignment )
-        #self.rotate(pivot_com)
-        self.rotate(pivot_sep)
-
-        #I think we need to recalculate theta after rotation  TEST TEST TEST
-        #self.theta = self.find_alignment(self.points[0])
-
-        # 1 * 1 * alignment
-
-        self.move(self.theta)
-
-
-########################################################################################################################
 
     def is_facing(self):
         is_facing = False
@@ -258,69 +259,48 @@ class Boid:
     def magic_wall(self):
         # right wall
         if self.center.x > CANVAS_WIDTH:
-            for point in self.points:
+            for point in self.vertices:
                 point.x -= (CANVAS_WIDTH - 5)
         # left wall
         elif self.center.x < 0:
-            for point in self.points:
+            for point in self.vertices:
                 point.x += (CANVAS_WIDTH - 5)
         # bottom wall
         if self.center.y > CANVAS_HEIGHT:
-            for point in self.points:
+            for point in self.vertices:
                 point.y -= (CANVAS_HEIGHT - 5)
         # top wall
         elif self.center.y < 0:
-            for point in self.points:
+            for point in self.vertices:
                 point.y += (CANVAS_HEIGHT - 5)
 
 
 def create_boid(size):
-    points = []
-    x_offset = random.randrange(50, CANVAS_WIDTH - 50 - (4 * size))
-    y_offset = random.randrange(50, CANVAS_HEIGHT - 50 - (2 * size))
+    x_offset = random.randrange(50, CANVAS_WIDTH - 50)
+    y_offset = random.randrange(50, CANVAS_HEIGHT - 50)
 
-    #Boids are created with positive y and x
-    #what if these change
+    bow = (Point((4 * size) + x_offset, (1 * size) + y_offset))
+    starboard = (Point(0 + x_offset, (2 * size) + y_offset))
+    port = (Point(0 + x_offset, 0 + y_offset))
 
-    # Added to make more randomness in initialization
-    if random.randrange(0,3) > 1:
-        xdir = -1
-    else:
-        xdir = 1
+    boid = Boid([bow, starboard, port])
 
-    if random.randrange(0,3) > 1:
-        ydir = -1
-    else:
-        ydir = 1
+    rand_rotation = random.randrange(90, 180)
+    boid.rotate(rand_rotation)
 
-    points.append(Point((4 * size) + x_offset * xdir, (1 * size) + y_offset * ydir))
-    points.append(Point(0 + x_offset * xdir, (2 * size) + y_offset * ydir))
-    points.append(Point(0 + x_offset * xdir, 0 + y_offset * ydir))
+    #boid.__init__([bow, starboard, port])
 
-    #theta not initialized , hmm
+    return boid
 
-    return points
 
-# vector initialization
-all_boids = []
-for i in range(NUM_BOIDS):
-    all_boids.append(Boid(create_boid(BOID_SCALE)))
-for i in all_boids:
-    rand_rotation = random.randrange(0, 359)
-    i.rotate(rand_rotation)
-    x_total = y_total = 0
-    for point in i.points:
-        x_total += point.x
-        y_total += point.y
-    # find the center based on current updated points
-    i.center = Point(x_total / 3, y_total / 3)
-    i.find_alignment(i.points[0])  #TEST
+# pre-allocate list space and initialize boids
+boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
 
 
 class Screen:
     def __init__(self, boid):
         points_list = []
-        for point in boid.points:
+        for point in boid.vertices:
             points_list.append([point.x, point.y])
         self.boid_list32 = numpy.array(points_list, numpy.int32)
 
@@ -330,74 +310,60 @@ class Screen:
     def plot_center(self):
         cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], 3, CENTER_COLOR_DOT, -1)
     def plot_corners(self):
-        cv2.circle(background, [round(each_boid.points[0].x), round(each_boid.points[0].y)], 3, CENTER_OF_MASS_LINE_COLOR, -1)
-        cv2.circle(background, [round(each_boid.points[1].x), round(each_boid.points[1].y)], 3, CENTER_COLOR_DOT, -1)
-        cv2.circle(background, [round(each_boid.points[2].x), round(each_boid.points[2].y)], 3, CENTER_COLOR_DOT, -1)
+        cv2.circle(background, [round(each_boid.vertices[0].x), round(each_boid.vertices[0].y)], 3, CENTER_OF_MASS_LINE_COLOR, -1)
+        cv2.circle(background, [round(each_boid.vertices[1].x), round(each_boid.vertices[1].y)], 3, CENTER_COLOR_DOT, -1)
+        cv2.circle(background, [round(each_boid.vertices[2].x), round(each_boid.vertices[2].y)], 3, CENTER_COLOR_DOT, -1)
 
     def draw_alignment_line(self):
-        cv2.line(background, (round(each_boid.points[0].x), round(each_boid.points[0].y)), (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
+        cv2.line(background, (round(each_boid.vertices[0].x), round(each_boid.vertices[0].y)), (round(each_boid.center.x), round(each_boid.center.y)), ALIGNMENT_LINE_COLOR, 1)
 
     def draw_vision(self):
         cv2.circle(background, [round(each_boid.center.x), round(each_boid.center.y)], VISION_RADIUS, VISION_COLOR)
 
     def draw_com(self):
-        center_of_mass = each_boid.find_com(all_boids, VISION_RADIUS)
+        center_of_mass = each_boid.find_com(boid_list, VISION_RADIUS)
         cv2.line(background, [round(each_boid.center.x), round(each_boid.center.y)],
                  [round(center_of_mass.x), round(center_of_mass.y)], CENTER_OF_MASS_LINE_COLOR, 1)
 
     def draw_closest(self):
-        apple = each_boid.find_closest_boid(all_boids, VISION_RADIUS)
+        apple = each_boid.find_closest_boid(boid_list, VISION_RADIUS)
         if apple != None:
             cv2.line(background, (round(each_boid.center.x), round(each_boid.center.y)),
                      (round(apple.x), round(apple.y)), ALIGNMENT_LINE_COLOR, 1)
 
 
+
 # game loop
-some_time = 10
-each_time = 1
-background = 0
-for i in range(100):
+for boid in range(100000):
     # Create canvas
-
-    if each_time > some_time:
-        background = numpy.zeros((CANVAS_HEIGHT, CANVAS_WIDTH, 3), numpy.uint8)
-        background.fill(0)
+    background = numpy.zeros((CANVAS_HEIGHT, CANVAS_WIDTH, 3), numpy.uint8)
+    background.fill(0)
     # changes for each individual boid
-        counter = 0
-        for each_boid in all_boids:
-            screen = Screen(each_boid)
-            points_list = []
-            counter += 1
 
-        # translations
-            each_boid.controller()
+    for each_boid in boid_list:
+        screen = Screen(each_boid)
 
         # create magic walls
-            each_boid.magic_wall()
+        each_boid.magic_wall()
 
         # update boid with new info
-            each_boid.update()
+        each_boid.update()
 
         # plot boid
-            screen.draw_boid()
+        screen.draw_boid()
 
         # plot center point
-            screen.plot_center()
-
-        # plot boid points
-            screen.plot_corners()
+        screen.plot_center()
 
         # plot alignment line
-            screen.draw_alignment_line()
+        screen.draw_alignment_line()
 
         # plot vision circle
-            screen.draw_vision()
+        screen.draw_vision()
         # find closest boid
-            screen.draw_com()
-            screen.draw_closest()
-        some_time += SIM_SLOW_SPEED
+        screen.draw_com()
+        screen.draw_closest()
 
-    each_time += 1
     # display drawings
     cv2.imshow('Boids', background)
     cv2.waitKey(SLEEP_TIME)
