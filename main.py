@@ -1,6 +1,7 @@
 import numpy as np
 import cv2 as cv
 import random
+import time
 
 from __init__ import *
 
@@ -36,7 +37,7 @@ class Boid:
             if closest_boid:
                 alignment = self.alignment(closest_boid)
                 pivot_to_sep = self.dir_to_turn(closest_boid.center) * -1
-                #self.rotate(pivot_to_sep)
+                self.rotate(pivot_to_sep)
                 self.rotate(pivot_to_com)
                 if alignment:
                     self.rotate(alignment)
@@ -221,7 +222,8 @@ def create_boid(size):
 boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
 
 # game loop
-for num in range(100000):
+for num in range(10000000):
+    start = time.time()
     # Create canvas
     screen = Screen()
     bg = screen.background
@@ -237,9 +239,17 @@ for num in range(100000):
 
         area = boid.search_area(boid_list, VISION_RADIUS)
         if area is not None:
-            screen.draw_closest(boid, area)
-            screen.draw_com(boid, area)
+            #screen.draw_closest(boid, area)
+            #screen.draw_com(boid, area)
+            pass
 
     # display drawings
     cv.imshow('Boids', bg)
-    cv.waitKey(SLEEP_TIME)
+
+    end = time.time()
+    time_taken_ms = (end - start) * 1000
+    if SLEEP_TIME - 1 > time_taken_ms:
+        time_frame = int(SLEEP_TIME - time_taken_ms)
+        cv.waitKey(time_frame)
+    else:
+        cv.waitKey(1)
