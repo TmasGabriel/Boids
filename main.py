@@ -243,4 +243,3 @@ for num in range(100000):
     # display drawings
     cv.imshow('Boids', bg)
     cv.waitKey(SLEEP_TIME)
-
