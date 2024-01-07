@@ -60,7 +60,7 @@ class Boid:
         return crashes
 
     def find_theta(self, point):  # (from center)
-        return np.arctan2(point[1] - self.center[1], point[0] - self.center[0]) * -1
+        return np.arctan2(point[1] - self.center[1], point[0] - self.center[0])
 
     def rotate(self, degrees):
         new_pos = [None, None, None]
@@ -82,7 +82,7 @@ class Boid:
         cos_angle = np.cos(direction)
         for vert in self.verts:
             vert[0] += (MOVE_SPEED * cos_angle)
-            vert[1] -= (MOVE_SPEED * sin_angle)
+            vert[1] += (MOVE_SPEED * sin_angle)
 
     def search_area(self, boids, search_rad):
         in_area = []
@@ -111,10 +111,10 @@ class Boid:
 
             if delta_sin < 0:
                 # turn clockwise
-                dir = 1
+                dir = -1
             elif delta_sin > 0:
                 # turn clockwise
-                dir = -1
+                dir = 1
             else:
                 # dont turn
                 dir = 0
@@ -144,10 +144,10 @@ class Boid:
 
         if delta_sin < 0:
             # turn clockwise
-            dir = 1
+            dir = -1
         elif delta_sin > 0:
             # turn clockwise
-            dir = -1
+            dir = 1
         else:
             # dont turn
             dir = 0
@@ -232,12 +232,14 @@ def create_boid(size):
 
     return boid
 
+
 def run(how_far):
     # pre-allocate list space and initialize boids
     boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
     num_crashes = 0
     # game loop
     for num in range(how_far):
+
 
         start = time.time()
         # Create canvas
@@ -251,7 +253,7 @@ def run(how_far):
             screen.draw_boid(boid)
             screen.plot_center(boid)
             screen.draw_alignment_line(boid)
-            screen.draw_vision(boid, CRASH_RADIUS)
+            #screen.draw_vision(boid, CRASH_RADIUS)
 
             area = boid.search_area(boid_list, VISION_RADIUS)
             if area is not None:
@@ -275,6 +277,6 @@ def run(how_far):
 
 crashes = 0
 for i in range(30):
-    crashes += run(10000)
+    crashes += run(1000)
 
 print(f' avg crash: {crashes / 30}')
