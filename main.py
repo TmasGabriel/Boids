@@ -22,12 +22,17 @@ class Boid:
         total_mass = [0, 0]
         shortest_dist = VISION_RADIUS
         closest_boid = None
+        crashes = 0
 
         area = self.search_area(boids, VISION_RADIUS)
+        too_close = self.search_area(area, FEEL_RADIUS)
+        crash = self.search_area(too_close, CRASH_RADIUS)
+
         if area is not None:
             for boid in area:
-                total_mass[0] += boid.center[0]
-                total_mass[1] += boid.center[1]
+                if boid not in too_close:
+                    total_mass[0] += boid.center[0]
+                    total_mass[1] += boid.center[1]
 
                 closest_boid, shortest_dist = self.find_closest_boid(boid, closest_boid, shortest_dist)
 
@@ -35,18 +40,24 @@ class Boid:
             pivot_to_com = self.dir_to_turn(center_of_mass)
 
             if closest_boid:
-                alignment = self.alignment(closest_boid)
-                pivot_to_sep = self.dir_to_turn(closest_boid.center) * -1
-                self.rotate(pivot_to_sep)
-                self.rotate(pivot_to_com)
-                if alignment:
-                    self.rotate(alignment)
+                if len(too_close) > 0:
+                    pivot_to_sep = self.dir_to_turn(closest_boid.center) * -1
+                    self.rotate(pivot_to_sep * 3)
+                    if len(crash) > 0:
+                        crashes += 1
+                else:
+                    self.rotate(pivot_to_com)
+                    alignment = self.alignment(closest_boid)
+                    if alignment:
+                        self.rotate(alignment)
 
         self.move(self.theta)
 
         self.center = ((self.bow[0] + self.port[0] + self.star[0]) / 3,
                        (self.bow[1] + self.port[1] + self.star[1]) / 3)
         self.theta = self.find_theta(self.bow)
+
+        return crashes
 
     def find_theta(self, point):  # (from center)
         return np.arctan2(point[1] - self.center[1], point[0] - self.center[0]) * -1
@@ -75,16 +86,19 @@ class Boid:
 
     def search_area(self, boids, search_rad):
         in_area = []
-        self_center_x = int(self.center[0])
-        self_center_y = int(self.center[1])
+        self_x = int(self.center[0])
+        self_y = int(self.center[1])
+        self_theta = self.theta
         for boid in boids:
-            boid_center_x = int(boid.center[0])
-            boid_center_y = int(boid.center[1])
+            boid_x = int(boid.center[0])
+            boid_y = int(boid.center[1])
+            diff = boid.theta - self_theta
 
-            if boid_center_x in range(self_center_x - search_rad, self_center_x + search_rad):
-                if boid_center_y in range(self_center_y - search_rad, self_center_y + search_rad):
-                    if (((boid_center_x - self_center_x) ** 2) + ((boid_center_y - self_center_y) ** 2)) ** .5 < search_rad:
-                        in_area.append(boid)
+            if boid is not self:
+                if boid_x in range(self_x - search_rad, self_x + search_rad):
+                    if boid_y in range(self_y - search_rad, self_y + search_rad):
+                        if (((boid_x - self_x) ** 2) + ((boid_y - self_y) ** 2)) ** .5 < search_rad:
+                            in_area.append(boid)
 
         return in_area
 
@@ -173,6 +187,7 @@ class Screen:
 
     def plot_center(self, boid):
         cv.circle(self.background, [round(boid.center[0]), round(boid.center[1])], 3, CENTER_COLOR_DOT, -1)
+
     def plot_corners(self, boid):
         cv.circle(self.background, [round(boid.verts[0][0]), round(boid.verts[0][1])], 3, CENTER_OF_MASS_LINE_COLOR, -1)
         cv.circle(self.background, [round(boid.verts[1][0]), round(boid.verts[1][1])], 3, CENTER_COLOR_DOT, -1)
@@ -181,8 +196,8 @@ class Screen:
     def draw_alignment_line(self, boid):
         cv.line(self.background, (round(boid.verts[0][0]), round(boid.verts[0][1])), (round(boid.center[0]), round(boid.center[1])), ALIGNMENT_LINE_COLOR, 1)
 
-    def draw_vision(self, boid):
-        cv.circle(self.background, [round(boid.center[0]), round(boid.center[1])], VISION_RADIUS, VISION_COLOR)
+    def draw_vision(self, boid, rad):
+        cv.circle(self.background, [round(boid.center[0]), round(boid.center[1])], rad, VISION_COLOR)
 
     def draw_com(self, boid, area):
         total_mass = [0, 0]
@@ -217,39 +232,49 @@ def create_boid(size):
 
     return boid
 
+def run(how_far):
+    # pre-allocate list space and initialize boids
+    boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
+    num_crashes = 0
+    # game loop
+    for num in range(how_far):
 
-# pre-allocate list space and initialize boids
-boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
+        start = time.time()
+        # Create canvas
+        screen = Screen()
+        bg = screen.background
 
-# game loop
-for num in range(10000000):
-    start = time.time()
-    # Create canvas
-    screen = Screen()
-    bg = screen.background
+        for boid in boid_list:
+            boid.magic_wall()
+            num_crashes += boid.update(boid_list)
 
-    for boid in boid_list:
-        boid.magic_wall()
-        boid.update(boid_list)
+            screen.draw_boid(boid)
+            screen.plot_center(boid)
+            screen.draw_alignment_line(boid)
+            screen.draw_vision(boid, CRASH_RADIUS)
 
-        screen.draw_boid(boid)
-        screen.plot_center(boid)
-        screen.draw_alignment_line(boid)
-        #screen.draw_vision(boid)
+            area = boid.search_area(boid_list, VISION_RADIUS)
+            if area is not None:
+                #screen.draw_closest(boid, area)
+                #screen.draw_com(boid, area)
+                pass
 
-        area = boid.search_area(boid_list, VISION_RADIUS)
-        if area is not None:
-            #screen.draw_closest(boid, area)
-            #screen.draw_com(boid, area)
-            pass
+        # display drawings
+        cv.imshow('Boids', bg)
 
-    # display drawings
-    cv.imshow('Boids', bg)
+        end = time.time()
+        time_taken_ms = (end - start) * 1000
+        if SLEEP_TIME - 1 > time_taken_ms:
+            time_frame = int(SLEEP_TIME - time_taken_ms)
+            cv.waitKey(time_frame)
+        else:
+            cv.waitKey(1)
 
-    end = time.time()
-    time_taken_ms = (end - start) * 1000
-    if SLEEP_TIME - 1 > time_taken_ms:
-        time_frame = int(SLEEP_TIME - time_taken_ms)
-        cv.waitKey(time_frame)
-    else:
-        cv.waitKey(1)
+    return num_crashes
+
+
+crashes = 0
+for i in range(30):
+    crashes += run(10000)
+
+print(f' avg crash: {crashes / 30}')
