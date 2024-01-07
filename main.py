@@ -22,34 +22,38 @@ class Boid:
         total_mass = [0, 0]
         shortest_dist = VISION_RADIUS
         closest_boid = None
+        total_theta = 0
+        comb_theta = 0
+        return_theta = None
         crashes = 0
 
         area = self.search_area(boids, VISION_RADIUS)
         too_close = self.search_area(area, FEEL_RADIUS)
         crash = self.search_area(too_close, CRASH_RADIUS)
 
-        if area is not None:
+        if len(area) > 0:
             for boid in area:
                 if boid not in too_close:
-                    total_mass[0] += boid.center[0]
-                    total_mass[1] += boid.center[1]
+                    total_mass = [total_mass[0] + boid.center[0], total_mass[1] + boid.center[1]]
+                    comb_theta += boid.theta
+                    total_theta += abs(boid.theta)
 
                 closest_boid, shortest_dist = self.find_closest_boid(boid, closest_boid, shortest_dist)
 
-            center_of_mass = self.find_center_of_mass(total_mass, len(area))
-            pivot_to_com = self.dir_to_turn(center_of_mass)
-
-            if closest_boid:
-                if len(too_close) > 0:
-                    pivot_to_sep = self.dir_to_turn(closest_boid.center) * -1
-                    self.rotate(pivot_to_sep * 3)
-                    if len(crash) > 0:
-                        crashes += 1
+            if len(too_close) > 0:
+                self.turn_to(closest_boid.center, extra_mult=-1)
+                if len(crash) > 0:
+                    crashes += 1
+            else:
+                center_of_mass = self.find_center_of_mass(total_mass, len(area) - len(too_close))
+                self.turn_to(center_of_mass)
+                avg_theta = total_theta / (len(area) - len(too_close)) * np.sign(comb_theta)
+                self.turn_to(None, target_theta=avg_theta)
+                if avg_theta > 0:
+                    return_theta = avg_theta
                 else:
-                    self.rotate(pivot_to_com)
-                    alignment = self.alignment(closest_boid)
-                    if alignment:
-                        self.rotate(alignment)
+                    return_theta = None
+
 
         self.move(self.theta)
 
@@ -57,7 +61,7 @@ class Boid:
                        (self.bow[1] + self.port[1] + self.star[1]) / 3)
         self.theta = self.find_theta(self.bow)
 
-        return crashes
+        return return_theta
 
     def find_theta(self, point):  # (from center)
         return np.arctan2(point[1] - self.center[1], point[0] - self.center[0])
@@ -68,7 +72,7 @@ class Boid:
         sin_angle = np.sin(angle_rad)
         cos_angle = np.cos(angle_rad)
 
-        for i, vert in enumerate(self.verts):
+        for vert in self.verts:
             dist_x = vert[0] - self.center[0]
             dist_y = vert[1] - self.center[1]
 
@@ -88,11 +92,9 @@ class Boid:
         in_area = []
         self_x = int(self.center[0])
         self_y = int(self.center[1])
-        self_theta = self.theta
         for boid in boids:
             boid_x = int(boid.center[0])
             boid_y = int(boid.center[1])
-            diff = boid.theta - self_theta
 
             if boid is not self:
                 if boid_x in range(self_x - search_rad, self_x + search_rad):
@@ -102,10 +104,11 @@ class Boid:
 
         return in_area
 
-    def dir_to_turn(self, target):
+    def dir_to_turn(self, target=None, target_theta=None):
         dir = 0
-        if target:
-            target_theta = self.find_theta(target)
+        if target or target_theta:
+            if target_theta is None:
+                target_theta = self.find_theta(target)
             delta = target_theta - self.theta
             delta_sin = round(np.sin(delta))
 
@@ -120,6 +123,9 @@ class Boid:
                 dir = 0
 
         return dir
+
+    def turn_to(self, target, extra_mult=1, target_theta=None):
+        self.rotate(self.dir_to_turn(target, target_theta) * ROTATION * extra_mult)
 
     def find_center_of_mass(self, total_mass, num_boids_in_area):
         if num_boids_in_area != 0:
@@ -138,21 +144,8 @@ class Boid:
 
         return closest_boid, shortest_dist
 
-    def alignment(self, closest_boid):
-        delta = closest_boid.theta - self.theta
-        delta_sin = round(np.sin(delta))
-
-        if delta_sin < 0:
-            # turn clockwise
-            dir = -1
-        elif delta_sin > 0:
-            # turn clockwise
-            dir = 1
-        else:
-            # dont turn
-            dir = 0
-
-        return dir
+    def find_avg_alignment(self):
+        pass
 
     def magic_wall(self):
             # right wall
@@ -248,12 +241,15 @@ def run(how_far):
 
         for boid in boid_list:
             boid.magic_wall()
-            num_crashes += boid.update(boid_list)
+            result = boid.update(boid_list)
+            if result is not None:
+                num_crashes += result
 
             screen.draw_boid(boid)
-            screen.plot_center(boid)
-            screen.draw_alignment_line(boid)
-            #screen.draw_vision(boid, CRASH_RADIUS)
+            #screen.plot_center(boid)
+            #screen.draw_alignment_line(boid)
+            #screen.draw_vision(boid, FEEL_RADIUS)
+            #screen.draw_vision(boid, VISION_RADIUS)
 
             area = boid.search_area(boid_list, VISION_RADIUS)
             if area is not None:
@@ -279,4 +275,4 @@ crashes = 0
 for i in range(30):
     crashes += run(1000)
 
-print(f' avg crash: {crashes / 30}')
+print(f' avg theta: {crashes / 30 / 1000 / 50}')
