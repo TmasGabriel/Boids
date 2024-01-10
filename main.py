@@ -34,4 +34,4 @@ def run(how_far):
         else:
             cv.waitKey(1)
 
-run(np.inf)
+run(100000000)
