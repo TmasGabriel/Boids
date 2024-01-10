@@ -28,16 +28,19 @@ class Boid:
 
         self.theta = self.find_theta(self.bow)
 
+        self.speed = MAX_SPEED
+
     def update(self, boids):
         total_mass = [0, 0]
         shortest_dist = VISION_RADIUS
         closest_boid = None
         total_theta = 0
         comb_theta = 0
-        return_theta = None
+        direct_in_front = []
 
         area = self.search_area(boids, VISION_RADIUS)
         too_close = self.search_area(area, FEEL_RADIUS)
+        crash = self.search_area(too_close, CRASH_RADIUS)
 
         if len(area) > 0:
             for boid in area:
@@ -46,10 +49,15 @@ class Boid:
                     comb_theta += boid.theta
                     total_theta += abs(boid.theta)
 
+                    if self.is_in_cone(boid.bow, np.pi / 8):
+                        direct_in_front.append(boid)
+
                 closest_boid, shortest_dist = self.find_closest_boid(boid, closest_boid, shortest_dist)
 
             if len(too_close) > 0:
                 self.turn_to(closest_boid.center, extra_mult=-1)
+            elif len(direct_in_front) > 0:
+                self.turn_to(direct_in_front[0].bow, extra_mult=-1)
             else:
                 center_of_mass = find_center_of_mass(total_mass, len(area) - len(too_close))
                 self.turn_to(center_of_mass)
@@ -63,7 +71,7 @@ class Boid:
                        (self.bow[1] + self.port[1] + self.star[1]) / 3)
         self.theta = self.find_theta(self.bow)
 
-        return return_theta
+        return len(crash)
 
     def find_theta(self, point):  # (from center)
         return np.arctan2(point[1] - self.center[1], point[0] - self.center[0])
@@ -87,8 +95,8 @@ class Boid:
         sin_angle = np.sin(direction)
         cos_angle = np.cos(direction)
         for vert in self.verts:
-            vert[0] += (MOVE_SPEED * cos_angle)
-            vert[1] += (MOVE_SPEED * sin_angle)
+            vert[0] += (self.speed * cos_angle)
+            vert[1] += (self.speed * sin_angle)
 
     def search_area(self, boids, search_rad):
         in_area = []
@@ -102,9 +110,28 @@ class Boid:
                 if boid_x in range(self_x - search_rad, self_x + search_rad):
                     if boid_y in range(self_y - search_rad, self_y + search_rad):
                         if (((boid_x - self_x) ** 2) + ((boid_y - self_y) ** 2)) ** .5 < search_rad:
-                            in_area.append(boid)
+                            perf = self.is_in_cone(boid.center, (np.pi * 3) / 2)
+                            if perf:
+                                in_area.append(boid)
+
 
         return in_area
+
+    def is_in_cone(self, target, width_rad):
+        V2 = [target[0] - self.center[0], target[1] - self.center[1]]
+        dot = np.cos(self.theta) * V2[0] + np.sin(self.theta) * V2[1]
+
+        mag_v1 = np.sqrt(np.cos(self.theta) ** 2 + np.sin(self.theta) ** 2)
+        mag_v2 = np.sqrt(V2[0] ** 2 + V2[1] ** 2)
+
+        # Avoid division by zero
+        if mag_v1 * mag_v2 == 0:
+            return False
+
+        angle = np.arccos(dot / (mag_v1 * mag_v2))
+
+        # Check if the target is within the cone
+        return angle <= width_rad / 2
 
     def dir_to_turn(self, target=None, target_theta=None):
         if target_theta is None:

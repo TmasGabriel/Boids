@@ -9,6 +9,7 @@ from boid import *
 def run(how_far):
     # pre-allocate list space and initialize boids
     boid_list = [create_boid(BOID_SCALE) for _ in range(NUM_BOIDS)]
+    value = 0
     # game loop
     for num in range(how_far):
         start = time.time()
@@ -18,7 +19,7 @@ def run(how_far):
 
         for boid in boid_list:
             boid.magic_wall()
-            boid.update(boid_list)
+            value += boid.update(boid_list)
 
             screen.draw_boid(boid)
 
@@ -34,4 +35,9 @@ def run(how_far):
         else:
             cv.waitKey(1)
 
-run(100000000)
+    return value
+
+value = 0
+for i in range(30):
+    value += run(1000)
+print(value/30)

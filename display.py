@@ -3,6 +3,7 @@ import cv2 as cv
 
 from __init__ import *
 
+
 class Screen:
     def __init__(self):
         self.background = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH, 3), np.uint8)
