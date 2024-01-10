@@ -8,7 +8,8 @@ VISION_COLOR = (0, 255, 0)
 CENTER_OF_MASS_LINE_COLOR = (0, 0, 255)
 
 
-MOVE_SPEED = 6  # amount of pixels a boid will move per frame
+MIN_SPEED = 3  # min amount of pixels a boid will move per frame
+MAX_SPEED = 6  # max amount of pixels a boid will move per frame
 ROTATION = 3
 
 NUM_BOIDS = 60
