@@ -37,6 +37,10 @@ class Screen:
         cv.line(self.background, (left, middle[1]), middle, ALIGNMENT_LINE_COLOR, 1)
         cv.line(self.background, (right, middle[1]), middle, ALIGNMENT_LINE_COLOR, 1)
 
+    def draw_quad2(self, top, bot, left, right, color):
+        poly_array32 = np.array([[left, top], [right, top], [right, bot], [left, bot]], np.int32)
+        cv.fillPoly(self.background, [poly_array32], color)
+
     def draw_com(self, boid, area):
         total_mass = [0, 0]
         for something in area:

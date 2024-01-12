@@ -20,27 +20,31 @@ def run(how_far):
 
         top, bot, left, right = 0, CANVAS_HEIGHT, 0, CANVAS_WIDTH
         middle = find_mid(top, bot, left, right)
-        screen.draw_quad(top, bot, left, right, middle)
         quad_list = []
 
         for boid in boid_list:
             boid.magic_wall()
             value += boid.update(boid_list)
-            screen.draw_vision(boid, VISION_RADIUS)
 
             quad, t, b, l, r = detect_quad(boid, top, bot, left, right, middle)
             mid = find_mid(t, b, l, r)
             screen.draw_quad(t, b, l, r, mid)
-            quad, t, b, l, r = detect_quad(boid, t, b, l, r, mid)
-            mid = find_mid(t, b, l, r)
+
+            quad, t3, b3, l3, r3 = detect_quad(boid, t, b, l, r, mid)
+            mid3 = find_mid(t3, b3, l3, r3)
+
+            quad, t2, b2, l2, r2 = detect_quad(boid, t3, b3, l3, r3, mid3)
+            a, b, c, d = find_adj(quad, t2, b2, l2, r2)
+            screen.draw_quad2(a, b, c, d, (0, 0, 255))
+            screen.draw_quad2(t2, b2, l2, r2, CENTER_COLOR_DOT)
             screen.draw_quad(t, b, l, r, mid)
-            quad, t, b, l, r = detect_quad(boid, t, b, l, r, mid)
-            mid = find_mid(t, b, l, r)
-            screen.draw_quad(t, b, l, r, mid)
+            screen.draw_quad(t3, b3, l3, r3, mid3)
 
             screen.draw_boid(boid)
+            screen.draw_vision(boid, VISION_RADIUS)
 
         # display drawings
+        screen.draw_quad(top, bot, left, right, middle)
         cv.imshow('Boids', bg)
 
         #processing inbetween frames
