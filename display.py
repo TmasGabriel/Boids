@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 
 from __init__ import *
+from screen_splitting import *
 
 
 class Screen:
@@ -29,6 +30,12 @@ class Screen:
 
     def draw_vision(self, boid, rad):
         cv.circle(self.background, [round(boid.center[0]), round(boid.center[1])], rad, VISION_COLOR)
+
+    def draw_quad(self, top, bot, left, right, middle):
+        cv.line(self.background, (middle[0], top), middle, ALIGNMENT_LINE_COLOR, 1)
+        cv.line(self.background, (middle[0], bot), middle, ALIGNMENT_LINE_COLOR, 1)
+        cv.line(self.background, (left, middle[1]), middle, ALIGNMENT_LINE_COLOR, 1)
+        cv.line(self.background, (right, middle[1]), middle, ALIGNMENT_LINE_COLOR, 1)
 
     def draw_com(self, boid, area):
         total_mass = [0, 0]

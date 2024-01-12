@@ -4,6 +4,7 @@ import time
 from __init__ import *
 from display import Screen
 from boid import *
+from screen_splitting import *
 
 
 def run(how_far):
@@ -17,9 +18,25 @@ def run(how_far):
         screen = Screen()
         bg = screen.background
 
+        top, bot, left, right = 0, CANVAS_HEIGHT, 0, CANVAS_WIDTH
+        middle = find_mid(top, bot, left, right)
+        screen.draw_quad(top, bot, left, right, middle)
+        quad_list = []
+
         for boid in boid_list:
             boid.magic_wall()
             value += boid.update(boid_list)
+            screen.draw_vision(boid, VISION_RADIUS)
+
+            quad, t, b, l, r = detect_quad(boid, top, bot, left, right, middle)
+            mid = find_mid(t, b, l, r)
+            screen.draw_quad(t, b, l, r, mid)
+            quad, t, b, l, r = detect_quad(boid, t, b, l, r, mid)
+            mid = find_mid(t, b, l, r)
+            screen.draw_quad(t, b, l, r, mid)
+            quad, t, b, l, r = detect_quad(boid, t, b, l, r, mid)
+            mid = find_mid(t, b, l, r)
+            screen.draw_quad(t, b, l, r, mid)
 
             screen.draw_boid(boid)
 
@@ -39,5 +56,5 @@ def run(how_far):
 
 value = 0
 for i in range(30):
-    value += run(1000)
+    value += run(10000000)
 print(value/30)
