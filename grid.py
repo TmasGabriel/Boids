@@ -18,16 +18,35 @@ class Grid:
         self.width_off = (total_width - self.real_width) / 2
         self.height_off = (total_height - self.real_height) / 2
 
-    def create_cells(self):
-        cell_cords = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
+        self.cell_cords = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
+
+    def create_grid(self):
         for i in range(self.rows):
             for j in range(self.cols):
-                cell_cords[i][j] = [(self.cell_width * j) + self.width_off, (self.cell_height * i) + self.height_off]
+                self.cell_cords[i][j] = [int((self.cell_width * j) + self.width_off),
+                                    int((self.cell_height * i) + self.height_off)]
 
-        return cell_cords
+        return self.cell_cords
+
+    def in_cell(self, boid):
+        return boid[0] // self.cell_width, boid[1] // self.cell_height
+
+    def adj_cells(self, cell):
+        adjacent_cells = [[] for _ in range(9)]
+        adjacent_cells[0] = cell[0], cell[1]
+        adjacent_cells[1] = cell[0] - 1, cell[1] - 1
+        adjacent_cells[2] = cell[0] - 1, cell[1]
+        adjacent_cells[3] = cell[0] - 1, cell[1] + 1
+        adjacent_cells[4] = cell[0],     cell[1] + 1
+        adjacent_cells[5] = cell[0] + 1, cell[1] + 1
+        adjacent_cells[6] = cell[0] + 1, cell[1]
+        adjacent_cells[7] = cell[0] + 1, cell[1] - 1
+        adjacent_cells[8] = cell[0],     cell[1] - 1
+
+        return adjacent_cells
 
 
-a = Grid(30, 20, 100, 100)
-apple = a.create_cells()
-for i in apple:
-    print(i)
+a = Grid(20, 30, 100, 100)
+a.create_grid()
+print()
+print(a.adj_cells(a.in_cell([32, 16])))

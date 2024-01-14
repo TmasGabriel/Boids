@@ -19,4 +19,4 @@ VISION_RADIUS = 64  # how far boids can see
 FEEL_RADIUS = 40  # how close is too close
 CRASH_RADIUS = 10
 
-SLEEP_TIME = 17  # how long to wait inbetween frames in milliseconds
+SLEEP_TIME = 170000  # how long to wait inbetween frames in milliseconds
