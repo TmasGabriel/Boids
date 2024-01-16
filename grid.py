@@ -32,16 +32,14 @@ class Grid:
         return boid[0] // self.cell_width, boid[1] // self.cell_height
 
     def adj_cells(self, cell):
-        adjacent_cells = [[] for _ in range(9)]
-        adjacent_cells[0] = cell[0], cell[1]
-        adjacent_cells[1] = cell[0] - 1, cell[1] - 1
-        adjacent_cells[2] = cell[0] - 1, cell[1]
-        adjacent_cells[3] = cell[0] - 1, cell[1] + 1
-        adjacent_cells[4] = cell[0],     cell[1] + 1
-        adjacent_cells[5] = cell[0] + 1, cell[1] + 1
-        adjacent_cells[6] = cell[0] + 1, cell[1]
-        adjacent_cells[7] = cell[0] + 1, cell[1] - 1
-        adjacent_cells[8] = cell[0],     cell[1] - 1
+        adjacent_cells = []
+        for row_offset in range(-1, 2):
+            for col_offset in range(-1, 2):
+                if row_offset == 0 and col_offset == 0:
+                    continue  # Skip the original cell itself
+                new_row, new_col = cell[0] + row_offset, cell[1] + col_offset
+                if 0 <= new_row < self.rows and 0 <= new_col < self.cols:
+                    adjacent_cells.append([new_row, new_col])
 
         return adjacent_cells
 
