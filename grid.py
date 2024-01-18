@@ -20,16 +20,19 @@ class Grid:
 
         self.cell_cords = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
+        self.dict = {'x': self.cell_cords[0], 'y': self.cell_cords[1], 'boids': []}
+
     def create_grid(self):
         for i in range(self.rows):
             for j in range(self.cols):
                 self.cell_cords[i][j] = [int((self.cell_width * j) + self.width_off),
                                     int((self.cell_height * i) + self.height_off)]
-
         return self.cell_cords
 
+
     def in_cell(self, boid):
-        return boid[0] // self.cell_width, boid[1] // self.cell_height
+        self.cell_cords[int(boid.center[0] // self.cell_width)][int(boid.center[1] // self.cell_height)].append(boid)
+        return self.cell_cords
 
     def adj_cells(self, cell):
         adjacent_cells = []
@@ -42,9 +45,3 @@ class Grid:
                     adjacent_cells.append([new_row, new_col])
 
         return adjacent_cells
-
-
-a = Grid(20, 30, 100, 100)
-a.create_grid()
-print()
-print(a.adj_cells(a.in_cell([32, 16])))
