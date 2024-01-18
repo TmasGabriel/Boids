@@ -15,7 +15,7 @@ ROTATION = 3
 NUM_BOIDS = 1
 BOID_SCALE = 3  # how many times larger should boids be than base size (4 by 2 pixels)
 
-VISION_RADIUS = 64  # how far boids can see
+VISION_RADIUS = 60  # how far boids can see
 FEEL_RADIUS = 40  # how close is too close
 CRASH_RADIUS = 10
 
