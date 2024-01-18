@@ -19,8 +19,7 @@ class Grid:
         self.height_off = (total_height - self.real_height) / 2
 
         self.cell_cords = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
-
-        self.dict = {'x': self.cell_cords[0], 'y': self.cell_cords[1], 'boids': []}
+        self.boid_storage = [[[] for _ in range(self.cols)] for _ in range(self.rows)]
 
     def create_grid(self):
         for i in range(self.rows):
@@ -29,10 +28,9 @@ class Grid:
                                     int((self.cell_height * i) + self.height_off)]
         return self.cell_cords
 
-
     def in_cell(self, boid):
-        self.cell_cords[int(boid.center[0] // self.cell_width)][int(boid.center[1] // self.cell_height)].append(boid)
-        return self.cell_cords
+        self.boid_storage[int(boid.center[0] // self.cell_width)][int(boid.center[1] // self.cell_height)].append(boid)
+        return self.boid_storage
 
     def adj_cells(self, cell):
         adjacent_cells = []
