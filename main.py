@@ -32,7 +32,7 @@ def run(how_far):
             screen.draw_vision(boid, VISION_RADIUS)
 
             grid.in_cell(boid)
-            for row in grid.cell_cords:
+            for row in grid.boid_storage:
                 print(row)
 
 
