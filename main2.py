@@ -64,14 +64,14 @@ def run(how_far, boids):
         for j, boid in enumerate(boids):
 
             screen.plot_center(boid.pos)
-            #screen.plot_center(target)
+            screen.plot_center(target)
 
-            screen.draw_alignment_line(boid, LIGHT_BLUE, 100)
+            screen.draw_alignment_line(boid, LIGHT_BLUE, 300)
 
             if container[j][2]:
                 screen.plot_center(container[j][2])
-            #if container[j][1]:
-                #screen.draw_closest(boid, container[j][1])
+            if container[j][1]:
+                screen.draw_closest(boid, container[j][1])
 
         for j, boid in enumerate(boids):
             boid.update(SPEED, ROTATION, container[j][0])
@@ -89,5 +89,8 @@ def run(how_far, boids):
         quit_if_win_closed('Boids')
 
 
-boid_list = spawn_boids_randomly(NUM_BOIDS, left=0, right=CANVAS_WIDTH, top=0, bot=CANVAS_HEIGHT)
+boid_list = []
+boid_list.append(spawn_boid(400, 300, -45))
+boid_list.append(spawn_boid(800, 300, -130))
+
 run(1000000000, boid_list)

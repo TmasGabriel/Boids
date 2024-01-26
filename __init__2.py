@@ -12,10 +12,10 @@ LIGHT_BLUE = (238, 244, 21)
 GREEN = (0, 255, 0)
 
 
-SPEED = 10
+SPEED = 3
 ACCELERATION = .01
 DECELERATION = .02
-ROTATION = 2  # how many degrees a boid can rotate per frame
+ROTATION = 1  # how many degrees a boid can rotate per frame
 
 NUM_BOIDS = 2
 BOID_SCALE = 15  # how many times larger should boids be than base size (4 by 2 pixels)

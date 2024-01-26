@@ -98,6 +98,8 @@ class Boid:
         if np.sign(d[3]) != np.sign(other.dir[1]):
             return None
 
+        print([x, y], self.pos, other.pos, d, self.dir_to_turn([x, y]) * -1)
+
         return [x, y]
 
     def dir_to_turn(self, target):
@@ -127,9 +129,9 @@ class Boid:
             self.pos[1] += (height - 5)
 
     def calculate(self, in_range, target):
-        closest, shortest, intersection, seperation = None, 10000, None, 0
+        closest, shortest, intersection, separation = None, 10000, None, 0
         # dir_to_turn = self.dir_to_turn(target)
-        area = self.search_area(in_range, 100)
+        area = self.search_area(in_range, 300)
         for boid in area:
             dist = self.find_dist(boid.pos)
             closest, shortest = self.find_closest(boid, dist, closest, shortest)
@@ -137,18 +139,25 @@ class Boid:
         if closest:
             intersection = self.find_cross(closest)
             if intersection:
-                seperation = self.dir_to_turn(intersection)
-        return [seperation, closest, intersection]
+                separation = self.dir_to_turn(intersection)
+        return [separation, closest, intersection]
 
     def update(self, speed, rotation, dir_to_turn):
         self.rotate(dir_to_turn * rotation)
         self.move(speed)
 
 
-def spawn_boids_randomly(num_boids, left=0, right=1000, top=0, bot=1000, deg_bot=0, deg_top=359):
-    boids = []
+def spawn_boid(x, y, degrees):
+    rads = np.deg2rad(degrees)
+    boid = Boid([x, y], rads)
+
+    return boid
+
+
+def spawn_boids_randomly(num_boids, left=0, right=1000, top=0, bot=1000, deg_bot=0, deg_top=360):
+    boid_list = []
     for i in range(num_boids):
         pos = [random.randrange(left, right + 1), random.randrange(top, bot + 1)]
-        theta = np.deg2rad(random.randrange(deg_bot, deg_top + 1))
-        boids.append(Boid(pos, theta))
-    return boids
+        degs = random.randrange(deg_bot, deg_top + 1)
+        boid_list.append(spawn_boid(pos[0], pos[1], degs))
+    return boid_list
