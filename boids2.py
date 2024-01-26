@@ -145,10 +145,15 @@ class Boid:
         self.move(speed)
 
 
+def spawn_boid(x, y, degrees):
+    rads = np.deg2rad(degrees)
+    return Boid([x, y], rads)
+
+
 def spawn_boids_randomly(num_boids, left=0, right=1000, top=0, bot=1000, deg_bot=0, deg_top=359):
     boids = []
     for i in range(num_boids):
         pos = [random.randrange(left, right + 1), random.randrange(top, bot + 1)]
         theta = np.deg2rad(random.randrange(deg_bot, deg_top + 1))
-        boids.append(Boid(pos, theta))
+        spawn_boid(pos[0], pos[1], theta)
     return boids
