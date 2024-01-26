@@ -119,7 +119,7 @@ class Boid:
 
     def is_in_cone(self, target, width_rad):
         V2 = [target[0] - self.center[0], target[1] - self.center[1]]
-        dot = np.cos(self.theta) * V2[0] + np.sin(self.theta) * V2[1]
+        dot_product = np.cos(self.theta) * V2[0] + np.sin(self.theta) * V2[1]
 
         mag_v1 = np.sqrt(np.cos(self.theta) ** 2 + np.sin(self.theta) ** 2)
         mag_v2 = np.sqrt(V2[0] ** 2 + V2[1] ** 2)
@@ -128,7 +128,7 @@ class Boid:
         if mag_v1 * mag_v2 == 0:
             return False
 
-        angle = np.arccos(dot / (mag_v1 * mag_v2))
+        angle = np.arccos(dot_product / (mag_v1 * mag_v2))
 
         # Check if the target is within the cone
         return angle <= width_rad / 2
