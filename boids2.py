@@ -87,15 +87,16 @@ class Boid:
         x = (other_y_int - self_y_int) / (self_slope - other_slope)
         y = self_slope * x + self_y_int
 
-        d = [x - self.pos[0], y - self.pos[1], x - other.pos[0], y - other.pos[1]]
+        dist = [x - self.pos[0], y - self.pos[1], x - other.pos[0], y - other.pos[1]]
 
-        if np.sign(d[0]) != np.sign(self.dir[0]):
+        # check if boids are going in the same direction
+        if np.sign(dist[0]) != np.sign(self.dir[0]):
             return None
-        if np.sign(d[1]) != np.sign(self.dir[1]):
+        if np.sign(dist[1]) != np.sign(self.dir[1]):
             return None
-        if np.sign(d[2]) != np.sign(other.dir[0]):
+        if np.sign(dist[2]) != np.sign(other.dir[0]):
             return None
-        if np.sign(d[3]) != np.sign(other.dir[1]):
+        if np.sign(dist[3]) != np.sign(other.dir[1]):
             return None
 
         return [x, y]
