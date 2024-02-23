@@ -46,14 +46,16 @@ def quit_if_win_closed(win_name):
 
 
 def run(how_far, boids):
+    screen = Screen()
+    bg = screen.background
     real_fps, max_fps, time_tracker = 1, 0, 0
     target = [800, 400]
     for i in range(how_far):
         start = time.time()
         container = []
 
-        screen = Screen()
-        bg = screen.background
+
+
 
         screen.disp_fps(real_fps, 20, 'Displayed FPS: ')
         screen.disp_fps(max_fps, 2, 'Theoretical FPS: ')
@@ -66,7 +68,7 @@ def run(how_far, boids):
             screen.plot_center(boid.pos)
             screen.plot_center(target)
 
-            screen.draw_alignment_line(boid, LIGHT_BLUE, 300)
+            #screen.draw_alignment_line(boid, LIGHT_BLUE, 300)
 
             if container[j][0]:
                 screen.draw_closest(boid, container[j][0])

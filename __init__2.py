@@ -4,12 +4,12 @@ CANVAS_HEIGHT = 800
 INIT_VEL = 5
 
 ROTATION = 1  # how many degrees a boid can rotate per second
-VISION_RADIUS = 100  # how far boids can see
+VISION_RADIUS = 1000  # how far boids can see
 
-NUM_BOIDS = 10
+NUM_BOIDS = 1
 
 BOID_SCALE = 15  # how many times larger should boids be than base size (4 by 2 pixels)
-DESIRED_FPS = 60  # how long to wait inbetween frames in milliseconds
+DESIRED_FPS = 5  # how long to wait inbetween frames in milliseconds
 
 
 
