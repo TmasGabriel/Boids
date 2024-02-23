@@ -59,7 +59,7 @@ def run(how_far, boids):
         screen.disp_fps(max_fps, 2, 'Theoretical FPS: ')
 
         for boid in boids:
-            container.append(boid.calculate(boid_list, target))
+            container.append(boid.calculate(boid_list))
 
         for j, boid in enumerate(boids):
 
@@ -68,13 +68,11 @@ def run(how_far, boids):
 
             screen.draw_alignment_line(boid, LIGHT_BLUE, 300)
 
-            if container[j][2]:
-                screen.plot_center(container[j][2])
-            if container[j][1]:
-                screen.draw_closest(boid, container[j][1])
+            if container[j][0]:
+                screen.draw_closest(boid, container[j][0])
 
         for j, boid in enumerate(boids):
-            boid.update(SPEED, ROTATION, container[j][0])
+            boid.update()
             boid.magic_wall(CANVAS_WIDTH, CANVAS_HEIGHT)
 
         cv.imshow('Boids', bg)
@@ -89,6 +87,7 @@ def run(how_far, boids):
         quit_if_win_closed('Boids')
 
 
-boid_list = [spawn_boid(400, 300, -45), spawn_boid(800, 300, -130)]
+#boid_list = [spawn_boid(400, 300, -30), spawn_boid(800, 200, -115)]
+boid_list = spawn_boids_randomly(NUM_BOIDS)
 
 run(1000000000, boid_list)

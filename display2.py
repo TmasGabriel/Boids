@@ -24,8 +24,8 @@ class Screen:
         cv.circle(self.background, [round(boid.verts[2][0]), round(boid.verts[2][1])], 3, BLUE, -1)
 
     def draw_alignment_line(self, boid, color, size):
-        cv.line(self.background, (round(-size * boid.dir[0] + boid.pos[0]), round(-size * boid.dir[1] + boid.pos[1])),
-                (round(size * boid.dir[0] + boid.pos[0]), round(size * boid.dir[1] + boid.pos[1])),
+        cv.line(self.background, (round(-size * np.cos(boid.theta) + boid.pos[0]), round(-size * np.sin(boid.theta) + boid.pos[1])),
+                (round(size * np.cos(boid.theta) + boid.pos[0]), round(size * np.sin(boid.theta) + boid.pos[1])),
                 color, 1)
 
     def draw_vision(self, boid, rad):
